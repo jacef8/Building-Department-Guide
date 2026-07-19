@@ -854,7 +854,8 @@ async function runKnowledgeBaseQuestion(question) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         question: question,
-        context: contextText
+        context: contextText,
+        mode: IS_STAFF ? 'staff' : 'public'
       })
     });
 
@@ -928,17 +929,23 @@ async function staffLogout() {
   location.href = '/';
 }
 
-// Learn the mode from the server, then render the right screen.
+// The version is decided purely by the URL: only the /staff route can be the
+// staff version. Every other URL is always public, no matter what cookie the
+// browser is holding.
 async function init() {
-  try {
-    const r = await fetch('/api/session');
-    if (r.ok) {
-      const s = await r.json();
-      IS_STAFF = !!s.staff;
-      STAFF_CONFIGURED = !!s.staffConfigured;
-    }
-  } catch (e) { /* default to public */ }
-  if (ON_STAFF_ROUTE && !IS_STAFF) { renderStaffLogin(); return; }
+  if (ON_STAFF_ROUTE) {
+    try {
+      const r = await fetch('/api/session');
+      if (r.ok) {
+        const s = await r.json();
+        IS_STAFF = !!s.staff;
+        STAFF_CONFIGURED = !!s.staffConfigured;
+      }
+    } catch (e) { /* fall through to the sign-in screen */ }
+    if (!IS_STAFF) { renderStaffLogin(); return; }
+  } else {
+    IS_STAFF = false; // public URL — never staff, regardless of login state
+  }
   render();
 }
 

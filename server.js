@@ -92,8 +92,14 @@ function isValidStaff(req) {
   return !!tok && timingSafeEqualStr(tok, staffToken());
 }
 
-// Attach req.isStaff for downstream handlers.
-function attachStaff(req, res, next) { req.isStaff = isValidStaff(req); next(); }
+// Staff mode requires BOTH a valid staff cookie AND an explicit staff-mode
+// request coming from the /staff page. The public page never asks for staff
+// mode, so a lingering cookie can never turn the public site into the staff
+// view — the version is decided by the page, not by login state.
+function attachStaff(req, res, next) {
+  req.isStaff = isValidStaff(req) && !!(req.body && req.body.mode === 'staff');
+  next();
+}
 
 // ── Server-owned guardrails ────────────────────────────────────────────
 // PUBLIC: strict, documents-only, heavily caveated, no internal names.
@@ -134,8 +140,11 @@ app.post('/api/staff-logout', (req, res) => {
   res.json({ staff: false });
 });
 
-app.get('/api/session', attachStaff, (req, res) => {
-  res.json({ staff: req.isStaff, staffConfigured: !!STAFF_PASSWORD });
+// Reports whether this browser holds a valid staff cookie — used only by the
+// /staff page to decide whether to skip the password prompt. The public page
+// ignores this entirely.
+app.get('/api/session', (req, res) => {
+  res.json({ staff: isValidStaff(req), staffConfigured: !!STAFF_PASSWORD });
 });
 
 // Serve the same app shell at /staff so staff have a stable sign-in URL.
