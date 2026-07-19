@@ -608,6 +608,12 @@ let isLoading = false;
 let lastError = null;
 let kbDropdownOpen = false;
 
+// Mode: the public locked-down assistant by default; the fuller internal
+// assistant unlocks with the shared office password (enforced server-side).
+let IS_STAFF = false;
+let STAFF_CONFIGURED = false;
+const ON_STAFF_ROUTE = /(^|\/)staff\/?$/.test(location.pathname) || location.hash === '#staff';
+
 // One question per document category, picked at random on each page
 // load so staff see the tool's range over time instead of the same
 // 4 examples every visit. Doesn't reshuffle mid-session (only on load),
@@ -681,11 +687,17 @@ function render() {
         <div class="eyebrow">Liberty County Building Dept</div>
         <h1>Permit Assistant</h1>
       </div>
-      <div class="badge">Informational \u00b7 5 sources</div>
+      <div class="badge">${IS_STAFF ? 'Staff mode' : 'Informational \u00b7 5 sources'}</div>
     </div>
-    <div class="disclaimer" style="background:var(--gold-light);color:#5A4408;border-bottom:1px solid var(--border);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
-      General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.
-    </div>
+    ${IS_STAFF ? `
+      <div class="disclaimer" style="background:#EAF1FB;color:#1B3A6B;border-bottom:1px solid var(--border);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
+        Internal staff assistant \u2014 not the public version. <a href="#" onclick="staffLogout();return false;" style="color:#1B3A6B;font-weight:600;">Sign out</a>
+      </div>
+    ` : `
+      <div class="disclaimer" style="background:var(--gold-light);color:#5A4408;border-bottom:1px solid var(--border);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
+        General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.
+      </div>
+    `}
     <div class="sources-strip">
       <button class="kb-toggle ${kbDropdownOpen ? 'open' : ''}" onclick="toggleKbDropdown(event)">
         \u{1F4DA} Knowledge base <span class="count-badge">${uniqueSources.length}</span> <span class="chevron">\u25BC</span>
@@ -832,19 +844,17 @@ async function runKnowledgeBaseQuestion(question) {
     const relevantChunks = retrieveChunks(question, 5);
     const contextText = relevantChunks.length
       ? relevantChunks.map(c => `[${c.source} \u2014 ${c.section}]\n${c.text}`).join('\n\n---\n\n')
-      : 'No closely matching reference material was found in the knowledge base.';
+      : '';
 
-    const systemInstructions = `You are an internal reference assistant for Liberty County Building Department front desk staff. Answer ONLY using the reference material provided below \u2014 do not use outside knowledge of Florida law or building codes beyond what's given. If the material doesn't contain the answer, say so plainly and suggest who to ask (Kenneth Hosford for legal/statutory questions, Lisa or Shaula for fee/budget questions). Where a rule is marked "pending confirmation," tell the staff member it's not yet settled rather than stating it as final. Keep answers concise and practical \u2014 the way you'd explain it to a coworker at the counter, not a legal memo. Do not repeat the raw reference material back verbatim at length; synthesize it in your own words.
-
-REFERENCE MATERIAL:
-${contextText}`;
-
+    // The instructions/guardrails live on the server and are chosen by mode
+    // (public vs. staff) \u2014 the browser only sends the question and the
+    // retrieved reference material.
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        system: systemInstructions,
-        question: question
+        question: question,
+        context: contextText
       })
     });
 
@@ -862,7 +872,77 @@ ${contextText}`;
   }
 }
 
-render();
+// ══════════════════════════════════════════════════════════════════════
+// Staff sign-in (shared office password) — the server decides the mode from
+// an HttpOnly cookie; this UI only appears on the /staff route.
+// ══════════════════════════════════════════════════════════════════════
+function renderStaffLogin(errMsg) {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="header">
+      <div class="bell">\u{1F512}</div>
+      <div class="titles">
+        <div class="eyebrow">Liberty County Building Dept</div>
+        <h1>Staff Sign-In</h1>
+      </div>
+    </div>
+    <div style="max-width:360px;margin:56px auto;padding:0 24px;text-align:center;">
+      <p style="color:#555;font-size:15px;line-height:1.5;margin-bottom:18px;">
+        Enter the office password to use the internal staff assistant.
+      </p>
+      ${errMsg ? `<div class="error-banner" style="margin-bottom:14px;">${escapeHtml(errMsg)}</div>` : ''}
+      <input id="staffPw" type="password" placeholder="Office password" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')staffLogin()"
+        style="width:100%;padding:12px 14px;font-size:15px;border:1px solid var(--border);border-radius:0;box-sizing:border-box;" />
+      <button onclick="staffLogin()"
+        style="width:100%;margin-top:12px;padding:12px;font:600 15px/1 var(--font,sans-serif);color:#fff;background:#1B3A6B;border:0;border-radius:0;cursor:pointer;">
+        Sign in
+      </button>
+      <p style="margin-top:20px;font-size:13px;"><a href="/" style="color:#1B3A6B;">Continue to the public version →</a></p>
+    </div>`;
+  const el = document.getElementById('staffPw');
+  if (el) el.focus();
+}
+
+async function staffLogin() {
+  const el = document.getElementById('staffPw');
+  const pw = el ? el.value : '';
+  if (!pw) return;
+  try {
+    const r = await fetch('/api/staff-login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    if (r.ok) { IS_STAFF = true; render(); }
+    else {
+      const e = await r.json().catch(() => ({}));
+      renderStaffLogin(e.error || 'Sign-in failed. Please try again.');
+    }
+  } catch (err) {
+    renderStaffLogin('Could not reach the server. Please try again.');
+  }
+}
+
+async function staffLogout() {
+  try { await fetch('/api/staff-logout', { method: 'POST' }); } catch (e) {}
+  location.href = '/';
+}
+
+// Learn the mode from the server, then render the right screen.
+async function init() {
+  try {
+    const r = await fetch('/api/session');
+    if (r.ok) {
+      const s = await r.json();
+      IS_STAFF = !!s.staff;
+      STAFF_CONFIGURED = !!s.staffConfigured;
+    }
+  } catch (e) { /* default to public */ }
+  if (ON_STAFF_ROUTE && !IS_STAFF) { renderStaffLogin(); return; }
+  render();
+}
+
+init();
 </script>
 
 <!-- ── PWA: install button + service worker ─────────────────── -->
