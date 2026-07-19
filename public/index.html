@@ -991,11 +991,17 @@ init();
   var btn = document.getElementById('installBtn');
   var deferred = null;
 
+  // Already running as the installed app, or in the compact mini box? Never
+  // offer to install — there's nothing to install, and it would just clutter.
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  var mini = new URLSearchParams(location.search).has('mini');
+  var suppressInstall = standalone || mini;
+
   // Chrome / Edge / Android: capture the install prompt and surface our button.
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferred = e;
-    if (btn) btn.hidden = false;
+    if (btn && !suppressInstall) btn.hidden = false;
   });
   if (btn) {
     btn.addEventListener('click', function () {
@@ -1008,8 +1014,7 @@ init();
 
   // iOS Safari has no install prompt — show a one-time hint on how to add it.
   var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  if (isIOS && !standalone && btn && !localStorage.getItem('bda_ios_hint')) {
+  if (isIOS && !suppressInstall && btn && !localStorage.getItem('bda_ios_hint')) {
     btn.hidden = false;
     btn.innerHTML = '<span style="font-size:17px;line-height:1;">⎋</span> Add to Home Screen';
     btn.addEventListener('click', function () {
