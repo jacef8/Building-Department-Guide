@@ -9,34 +9,40 @@
 <style>
   :root {
     --navy: #1B3A6B;
-    --navy-dark: #12274A;
-    --gold: #C8960C;
-    --gold-light: #F0D98C;
-    --bg: #F5F6FA;
+    --navy-dark: #0D1E3D;
+    --gold: #D9A520;
+    --gold-light: #FBEBBE;
+    --bg: #EEF1F8;
     --panel: #FFFFFF;
-    --border: #E4E8F0;
-    --text: #16181D;
+    --border: #E1E5EF;
+    --text: #12141A;
     --text-mute: #6B7280;
     --form-green: #3A6B2E;
     --law-violet: #5B3A8E;
     --danger: #B03A2E;
     --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, Helvetica, Arial, sans-serif;
-    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-    --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.08);
-    --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.14);
+    --shadow-sm: 0 2px 6px rgba(16, 24, 40, 0.08);
+    --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.12);
+    --shadow-lg: 0 20px 50px rgba(16, 24, 40, 0.20);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 0; background: transparent; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+  }
   .app {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    min-height: 640px;
+    height: 100vh;
+    max-height: 100vh;
     font-family: var(--font);
-    font-size: 16px;
+    font-size: 17px;
     color: var(--text);
-    background: var(--bg);
-    border-radius: 20px;
+    background: radial-gradient(circle at 15% 0%, #F5F7FC 0%, var(--bg) 55%);
+    border-radius: 28px;
     overflow: hidden;
     border: 1px solid var(--border);
     box-shadow: var(--shadow-lg);
@@ -44,144 +50,199 @@
 
   /* ── Header ───────────────────────────────────────────── */
   .header {
-    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
+    background: linear-gradient(120deg, var(--navy) 0%, var(--navy-dark) 100%);
     color: white;
-    padding: 22px 26px 20px;
+    padding: 32px 34px 28px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: "";
+    position: absolute;
+    top: -60%; right: -10%;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(217,165,32,0.28) 0%, transparent 70%);
+    pointer-events: none;
   }
   .header .bell {
-    width: 46px; height: 46px;
-    border-radius: 14px;
+    width: 60px; height: 60px;
+    border-radius: 18px;
     background: var(--gold);
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
+    font-size: 28px;
     flex-shrink: 0;
     box-shadow: var(--shadow-md);
+    position: relative;
+    z-index: 1;
   }
-  .header .titles { line-height: 1.3; }
+  .header .titles { line-height: 1.3; position: relative; z-index: 1; }
   .header .eyebrow {
-    font-size: 12px;
-    letter-spacing: 0.1em;
+    font-size: 13px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--gold-light);
-    font-weight: 700;
+    font-weight: 800;
   }
   .header h1 {
-    margin: 3px 0 0;
-    font-size: 23px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    margin: 5px 0 0;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
   .header .badge {
     margin-left: auto;
-    font-size: 12px;
-    background: rgba(255,255,255,0.16);
-    padding: 7px 14px;
+    font-size: 13px;
+    background: rgba(255,255,255,0.18);
+    padding: 9px 18px;
     border-radius: 100px;
     letter-spacing: 0.02em;
     white-space: nowrap;
-    font-weight: 600;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+    backdrop-filter: blur(6px);
   }
 
   /* ── Source / tools strip ─────────────────────────────── */
   .sources-strip {
     background: white;
     border-bottom: 1px solid var(--border);
-    padding: 14px 26px;
+    padding: 16px 34px;
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
-    font-size: 13.5px;
+    font-size: 14.5px;
     color: var(--text-mute);
-    flex-wrap: wrap;
+    position: relative;
   }
-  .sources-strip .strip-label { font-weight: 600; color: var(--text); }
-  .sources-strip .doc-chip {
+  .kb-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 100px;
-    padding: 5px 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 500;
+    padding: 10px 18px;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
-  .doc-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--navy); }
+  .kb-toggle:hover { border-color: var(--gold); background: var(--gold-light); }
+  .kb-toggle .count-badge {
+    background: var(--navy);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 100px;
+  }
+  .kb-toggle .chevron { transition: transform 0.15s ease; font-size: 11px; color: var(--text-mute); }
+  .kb-toggle.open .chevron { transform: rotate(180deg); }
+
+  .kb-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 34px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+    min-width: 260px;
+  }
+  .kb-dropdown .doc-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .doc-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
 
   .parcel-link {
     margin-left: auto;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
+    gap: 8px;
     background: var(--navy);
     color: white;
     text-decoration: none;
-    padding: 8px 15px;
+    padding: 11px 20px;
     border-radius: 100px;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     box-shadow: var(--shadow-sm);
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     white-space: nowrap;
   }
-  .parcel-link:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); background: var(--navy-dark); }
+  .parcel-link:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); background: var(--navy-dark); }
 
   /* ── Chat area ────────────────────────────────────────── */
   .chat {
     flex: 1;
     overflow-y: auto;
-    padding: 28px;
+    padding: 34px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 26px;
   }
-  .msg { display: flex; gap: 12px; max-width: 88%; }
+  .msg { display: flex; gap: 16px; max-width: 92%; }
   .msg.user { align-self: flex-end; flex-direction: row-reverse; }
   .msg .avatar {
-    width: 34px; height: 34px; border-radius: 11px;
+    width: 42px; height: 42px; border-radius: 13px;
     flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700;
+    font-size: 13px; font-weight: 800;
     margin-top: 2px;
     box-shadow: var(--shadow-sm);
   }
   .msg.assistant .avatar { background: var(--navy); color: white; }
   .msg.user .avatar { background: var(--gold); color: white; }
   .bubble {
-    padding: 15px 18px;
-    border-radius: 16px;
-    font-size: 16px;
-    line-height: 1.6;
+    padding: 20px 24px;
+    border-radius: 20px;
+    font-size: 17px;
+    line-height: 1.65;
   }
   .msg.assistant .bubble {
     background: white;
-    border: 1px solid var(--border);
-    border-top-left-radius: 4px;
-    box-shadow: var(--shadow-sm);
+    border-left: 4px solid var(--gold);
+    box-shadow: var(--shadow-md);
   }
   .msg.user .bubble {
     background: var(--navy);
     color: white;
-    border-top-right-radius: 4px;
   }
-  .bubble p { margin: 0 0 10px; }
+  .bubble p { margin: 0 0 12px; }
   .bubble p:last-child { margin-bottom: 0; }
   .citation-tag {
     display: inline-block;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 12.5px;
+    font-weight: 600;
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--navy);
-    padding: 3px 10px;
+    padding: 4px 12px;
     border-radius: 100px;
-    margin: 3px 4px 0 0;
+    margin: 4px 5px 0 0;
   }
   .msg.assistant .sources-used {
-    margin-top: 10px;
-    padding-top: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
     border-top: 1px dashed var(--border);
   }
 
@@ -189,29 +250,37 @@
     margin: auto;
     text-align: center;
     color: var(--text-mute);
-    max-width: 460px;
+    max-width: 520px;
   }
-  .empty-state .icon { font-size: 36px; margin-bottom: 14px; }
-  .empty-state h2 { color: var(--navy); font-size: 21px; margin: 0 0 8px; font-weight: 700; letter-spacing: -0.01em; }
-  .empty-state p { font-size: 15px; line-height: 1.6; margin: 0 0 18px; }
-  .suggestion-row { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
+  .empty-state .icon {
+    font-size: 30px;
+    margin: 0 auto 20px;
+    width: 84px; height: 84px;
+    display: flex; align-items: center; justify-content: center;
+    background: white;
+    border-radius: 24px;
+    box-shadow: var(--shadow-md);
+  }
+  .empty-state h2 { color: var(--navy); font-size: 26px; margin: 0 0 10px; font-weight: 800; letter-spacing: -0.02em; }
+  .empty-state p { font-size: 16px; line-height: 1.65; margin: 0 0 24px; }
+  .suggestion-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
   .suggestion-chip {
     background: white;
     border: 1px solid var(--border);
     color: var(--navy);
-    font-size: 13.5px;
-    font-weight: 500;
-    padding: 9px 16px;
+    font-size: 14.5px;
+    font-weight: 600;
+    padding: 12px 20px;
     border-radius: 100px;
     cursor: pointer;
     box-shadow: var(--shadow-sm);
     transition: all 0.15s ease;
   }
-  .suggestion-chip:hover { border-color: var(--gold); background: var(--gold-light); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .suggestion-chip:hover { border-color: var(--gold); background: var(--gold-light); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
-  .typing { display: flex; gap: 5px; padding: 6px 0; }
+  .typing { display: flex; gap: 6px; padding: 8px 0; }
   .typing span {
-    width: 7px; height: 7px; border-radius: 50%;
+    width: 8px; height: 8px; border-radius: 50%;
     background: var(--text-mute);
     animation: bounce 1.2s infinite ease-in-out;
   }
@@ -223,47 +292,48 @@
   .input-bar {
     background: white;
     border-top: 1px solid var(--border);
-    padding: 18px 22px;
+    padding: 22px 30px;
     display: flex;
-    gap: 12px;
-    align-items: flex-end;
+    gap: 14px;
+    align-items: center;
   }
   .input-bar textarea {
     flex: 1;
     resize: none;
-    border: 1.5px solid var(--border);
-    border-radius: 14px;
-    padding: 13px 16px;
+    border: 2px solid var(--border);
+    border-radius: 100px;
+    padding: 16px 24px;
     font-family: var(--font);
-    font-size: 16px;
-    line-height: 1.45;
+    font-size: 17px;
+    line-height: 1.3;
     max-height: 96px;
     outline: none;
     color: var(--text);
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .input-bar textarea:focus { border-color: var(--navy); }
+  .input-bar textarea:focus { border-color: var(--navy); box-shadow: 0 0 0 4px rgba(27,58,107,0.08); }
   .input-bar button {
     background: var(--navy);
     color: white;
     border: none;
-    border-radius: 14px;
-    padding: 0 22px;
-    height: 50px;
-    font-size: 14.5px;
-    font-weight: 700;
+    border-radius: 100px;
+    padding: 0 28px;
+    height: 56px;
+    font-size: 15.5px;
+    font-weight: 800;
     cursor: pointer;
     box-shadow: var(--shadow-sm);
-    transition: background 0.15s ease, transform 0.12s ease;
+    transition: background 0.15s ease, transform 0.15s ease;
+    flex-shrink: 0;
   }
-  .input-bar button:hover:not(:disabled) { background: var(--navy-dark); transform: translateY(-1px); }
+  .input-bar button:hover:not(:disabled) { background: var(--navy-dark); transform: translateY(-2px); }
   .input-bar button:disabled { background: #A9B4C4; cursor: not-allowed; transform: none; }
 
   .disclaimer {
-    font-size: 12px;
+    font-size: 12.5px;
     color: var(--text-mute);
     text-align: center;
-    padding: 8px 18px 16px;
+    padding: 10px 20px 20px;
     background: white;
   }
 
@@ -271,11 +341,12 @@
     background: #FDECEC;
     border: 1px solid var(--danger);
     color: var(--danger);
-    font-size: 14px;
-    padding: 13px 16px;
-    border-radius: 12px;
-    margin: 0 22px 4px;
+    font-size: 14.5px;
+    padding: 15px 18px;
+    border-radius: 16px;
+    margin: 0 30px 6px;
     line-height: 1.5;
+    font-weight: 500;
   }
 
   ::-webkit-scrollbar { width: 8px; }
@@ -507,13 +578,56 @@ function formatParcelResult(features, searchedFor) {
 let messages = [];
 let isLoading = false;
 let lastError = null;
+let kbDropdownOpen = false;
 
-const SUGGESTIONS = [
-  "What forms do I need for a new mobile home set-up?",
-  "Does the $7,500 exemption cover a bathroom remodel?",
-  "What's the fee for a residential roofing permit?",
-  "What changed for private provider roof inspections?"
-];
+// One question per document category, picked at random on each page
+// load so staff see the tool's range over time instead of the same
+// 4 examples every visit. Doesn't reshuffle mid-session (only on load),
+// so it stays stable while someone's actually using it.
+const SUGGESTION_POOL = {
+  'Building Guide': [
+    "What forms do I need for a new mobile home set-up?",
+    "What's the fee for a residential roofing permit?",
+    "Does the $7,500 exemption cover a bathroom remodel?",
+    "What's required for an owner-builder permit?"
+  ],
+  'HB 803 Memo': [
+    "What changed for private provider roof inspections?",
+    "What's still pending confirmation from the 2026 legislative session?",
+    "Did the permit expiration rules change this year?"
+  ],
+  '2026 Fee Schedule': [
+    "What's the fee for a new communication tower?",
+    "How much is a Tier 2 site plan review?",
+    "What's the renewal fee on an expired permit?"
+  ],
+  'Comprehensive Plan': [
+    "How close can I build near a wellhead?",
+    "What's the density cap for Agriculture land use?",
+    "What's the setback for a road planned for multilaning?"
+  ],
+  'Land Development Code': [
+    "What's the minimum lot size for a single-family home?",
+    "What triggers a site plan review?",
+    "What's the fee for a mobile home park?"
+  ]
+};
+
+function pickRandomSuggestions() {
+  const categories = Object.keys(SUGGESTION_POOL);
+  const picks = categories.map(cat => {
+    const options = SUGGESTION_POOL[cat];
+    return options[Math.floor(Math.random() * options.length)];
+  });
+  // shuffle so the category order isn't always the same either
+  for (let i = picks.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [picks[i], picks[j]] = [picks[j], picks[i]];
+  }
+  return picks;
+}
+
+const SUGGESTIONS = pickRandomSuggestions();
 
 function escapeHtml(str) {
   const div = document.createElement('div');
@@ -542,8 +656,14 @@ function render() {
       <div class="badge">Prototype \u00b7 5 documents loaded</div>
     </div>
     <div class="sources-strip">
-      <span class="strip-label">Knowledge base:</span>
-      ${uniqueSources.map(s => `<span class="doc-chip"><span class="dot"></span>${escapeHtml(s)}</span>`).join('')}
+      <button class="kb-toggle ${kbDropdownOpen ? 'open' : ''}" onclick="toggleKbDropdown(event)">
+        \u{1F4DA} Knowledge base <span class="count-badge">${uniqueSources.length}</span> <span class="chevron">\u25BC</span>
+      </button>
+      ${kbDropdownOpen ? `
+        <div class="kb-dropdown">
+          ${uniqueSources.map(s => `<span class="doc-chip"><span class="dot"></span>${escapeHtml(s)}</span>`).join('')}
+        </div>
+      ` : ''}
       <a class="parcel-link" href="https://qpublic.schneidercorp.com/Application.aspx?App=LibertyCountyFL&Layer=Parcels&PageType=Search" target="_blank" rel="noopener">
         \u{1F5FA}\uFE0F Look up a parcel
       </a>
@@ -592,6 +712,20 @@ function render() {
   const input = document.getElementById('questionInput');
   if (input) input.focus();
 }
+
+function toggleKbDropdown(e) {
+  if (e) e.stopPropagation();
+  kbDropdownOpen = !kbDropdownOpen;
+  render();
+}
+
+// Close the dropdown if the user clicks anywhere outside it
+document.addEventListener('click', (e) => {
+  if (!kbDropdownOpen) return;
+  if (e.target.closest('.kb-toggle') || e.target.closest('.kb-dropdown')) return;
+  kbDropdownOpen = false;
+  render();
+});
 
 function handleKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
