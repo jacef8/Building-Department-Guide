@@ -367,6 +367,28 @@
 
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-thumb { background: #C7CEDA; border-radius: 8px; }
+
+  /* ── Mini mode (?mini=1) — compact layout for a small floating window ── */
+  .app.mini { font-size: 15px; }
+  .mini .header { padding: 9px 14px; gap: 10px; }
+  .mini .header .bell { display: none; }
+  .mini .header .eyebrow { display: none; }
+  .mini .header h1 { font-size: 17px; margin: 0; }
+  .mini .header .badge { font-size: 11px; padding: 4px 9px; }
+  .mini .sources-strip { display: none; }
+  .mini .topbar { display: none; }
+  .mini .chat { padding: 12px 14px; gap: 12px; }
+  .mini .msg { max-width: 100%; gap: 10px; }
+  .mini .msg .avatar { width: 30px; height: 30px; border-radius: 6px; }
+  .mini .bubble { padding: 12px 14px; font-size: 15px; border-radius: 8px; }
+  .mini .empty-state .icon { width: 52px; height: 52px; font-size: 22px; margin-bottom: 12px; border-radius: 8px; }
+  .mini .empty-state h2 { font-size: 18px; }
+  .mini .empty-state p { font-size: 13.5px; margin-bottom: 14px; }
+  .mini .suggestion-chip { font-size: 13px; padding: 8px 12px; }
+  .mini .input-bar { padding: 10px 12px; gap: 8px; }
+  .mini .input-bar textarea { padding: 10px 13px; font-size: 15px; }
+  .mini .input-bar button { height: 44px; padding: 0 18px; font-size: 14px; }
+  .mini .disclaimer { padding: 6px 12px 8px; font-size: 11px; }
 </style>
 
 <div class="app" id="app"></div>
@@ -613,6 +635,8 @@ let kbDropdownOpen = false;
 let IS_STAFF = false;
 let STAFF_CONFIGURED = false;
 const ON_STAFF_ROUTE = /(^|\/)staff\/?$/.test(location.pathname) || location.hash === '#staff';
+// Mini mode: compact layout for a small floating desktop window (?mini=1).
+const MINI = new URLSearchParams(location.search).has('mini');
 
 // One question per document category, picked at random on each page
 // load so staff see the tool's range over time instead of the same
@@ -690,11 +714,11 @@ function render() {
       <div class="badge">${IS_STAFF ? 'Staff mode' : 'Informational \u00b7 5 sources'}</div>
     </div>
     ${IS_STAFF ? `
-      <div class="disclaimer" style="background:#EAF1FB;color:#1B3A6B;border-bottom:1px solid var(--border);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
+      <div class="disclaimer topbar" style="background:#EAF1FB;color:#1B3A6B;border-bottom:1px solid var(--border);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
         Internal staff assistant \u2014 not the public version. <a href="#" onclick="staffLogout();return false;" style="color:#1B3A6B;font-weight:600;">Sign out</a>
       </div>
     ` : `
-      <div class="disclaimer" style="background:var(--gold-light);color:#5A4408;border-bottom:1px solid var(--border);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
+      <div class="disclaimer topbar" style="background:var(--gold-light);color:#5A4408;border-bottom:1px solid var(--border);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
         General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.
       </div>
     `}
@@ -930,6 +954,7 @@ async function staffLogout() {
 
 // Learn the mode from the server, then render the right screen.
 async function init() {
+  if (MINI) document.getElementById('app').classList.add('mini');
   try {
     const r = await fetch('/api/session');
     if (r.ok) {
