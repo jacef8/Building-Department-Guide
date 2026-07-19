@@ -2,8 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Liberty County Building Dept — Staff Reference Assistant</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#1B3A6B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Building Dept">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 </head>
 <body>
 <style>
@@ -851,6 +860,57 @@ ${contextText}`;
 }
 
 render();
+</script>
+
+<!-- ── PWA: install button + service worker ─────────────────── -->
+<button id="installBtn" hidden aria-label="Install app"
+  style="position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;align-items:center;gap:8px;
+         padding:11px 16px;border:0;border-radius:0;cursor:pointer;font:600 15px/1 var(--font,sans-serif);
+         color:#0D1E3D;background:#D9A520;box-shadow:0 8px 24px rgba(16,24,40,.28);">
+  <span style="font-size:17px;line-height:1;">⤓</span> Install app
+</button>
+<script>
+(function () {
+  // Register the service worker (required for installability).
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function (e) {
+        console.warn('SW registration failed:', e);
+      });
+    });
+  }
+
+  var btn = document.getElementById('installBtn');
+  var deferred = null;
+
+  // Chrome / Edge / Android: capture the install prompt and surface our button.
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferred = e;
+    if (btn) btn.hidden = false;
+  });
+  if (btn) {
+    btn.addEventListener('click', function () {
+      if (!deferred) return;
+      deferred.prompt();
+      deferred.userChoice.finally(function () { deferred = null; btn.hidden = true; });
+    });
+  }
+  window.addEventListener('appinstalled', function () { if (btn) btn.hidden = true; });
+
+  // iOS Safari has no install prompt — show a one-time hint on how to add it.
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (isIOS && !standalone && btn && !localStorage.getItem('bda_ios_hint')) {
+    btn.hidden = false;
+    btn.innerHTML = '<span style="font-size:17px;line-height:1;">⎋</span> Add to Home Screen';
+    btn.addEventListener('click', function () {
+      alert('To install: tap the Share button, then "Add to Home Screen".');
+      localStorage.setItem('bda_ios_hint', '1');
+      btn.hidden = true;
+    });
+  }
+})();
 </script>
 
 </body>
