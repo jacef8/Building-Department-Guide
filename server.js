@@ -120,7 +120,7 @@ app.post('/api/staff-login', (req, res) => {
     return res.status(401).json({ error: 'Incorrect password.' });
   }
   const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
-  // 30 days so the always-open staff "mini box" doesn't need re-login daily.
+  // 30 days so staff aren't re-entering the office password constantly.
   const cookie = [`bda_staff=${staffToken()}`, 'HttpOnly', 'Path=/', 'SameSite=Lax', 'Max-Age=2592000']
     .concat(isHttps ? ['Secure'] : []).join('; ');
   res.setHeader('Set-Cookie', cookie);
