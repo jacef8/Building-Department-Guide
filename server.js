@@ -55,6 +55,56 @@ app.post('/api/ask', async (req, res) => {
   }
 });
 
+// ── Parcel lookup: Florida DOR statewide parcel/cadastral feature service ──
+// Public ArcGIS REST API (no key required), maintained by the Florida
+// Dept of Revenue from each county property appraiser's annual tax roll
+// submission. CO_NO=49 is Liberty County's DOR county number.
+// This is a snapshot (updated a few times a year), not a live county feed —
+// for anything legally significant, staff should still confirm against the
+// county Property Appraiser's own site (linked in the UI).
+const PARCEL_API_BASE = 'https://services9.arcgis.com/Gh9awoU677aKree0/arcgis/rest/services/Florida_Statewide_Cadastral/FeatureServer/0/query';
+const LIBERTY_CO_NO = 49;
+
+app.post('/api/parcel', async (req, res) => {
+  const { parcelId } = req.body || {};
+  if (!parcelId || typeof parcelId !== 'string') {
+    return res.status(400).json({ error: 'Missing "parcelId" in request body.' });
+  }
+
+  const cleaned = parcelId.trim().replace(/'/g, "''"); // basic SQL-injection guard for this literal
+  if (!cleaned) {
+    return res.status(400).json({ error: 'Parcel ID was empty after trimming.' });
+  }
+
+  const whereClause = `CO_NO=${LIBERTY_CO_NO} AND (PARCEL_ID='${cleaned}' OR PARCEL_ID LIKE '%${cleaned}%')`;
+  const outFields = [
+    'PARCEL_ID', 'DOR_UC', 'OWN_NAME', 'OWN_ADDR1', 'OWN_CITY', 'OWN_STATE',
+    'PHY_ADDR1', 'PHY_CITY', 'PHY_ZIPCD', 'S_LEGAL', 'LND_SQFOOT', 'TOT_LVG_AR',
+    'JV', 'LND_VAL', 'NO_RES_UNT', 'NO_BULDNG', 'TWN', 'RNG', 'SEC', 'ACT_YR_BLT'
+  ].join(',');
+
+  const url = `${PARCEL_API_BASE}?where=${encodeURIComponent(whereClause)}` +
+    `&outFields=${outFields}&resultRecordCount=5&returnGeometry=false&f=json`;
+
+  try {
+    const apiResponse = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!apiResponse.ok) {
+      console.error('Parcel API HTTP error:', apiResponse.status);
+      return res.status(502).json({ error: `Parcel data service returned status ${apiResponse.status}` });
+    }
+    const data = await apiResponse.json();
+    if (data.error) {
+      console.error('Parcel API returned an error object:', data.error);
+      return res.status(502).json({ error: data.error.message || 'Parcel data service returned an error.' });
+    }
+    const features = (data.features || []).map(f => f.attributes);
+    res.json({ features });
+  } catch (err) {
+    console.error('Parcel lookup proxy error:', err);
+    res.status(500).json({ error: 'Failed to reach the Florida parcel data service from the server.' });
+  }
+});
+
 // Health check — handy for Railway
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
