@@ -42,10 +42,7 @@
     font-size: 17px;
     color: var(--text);
     background: radial-gradient(circle at 15% 0%, #F5F7FC 0%, var(--bg) 55%);
-    border-radius: 28px;
     overflow: hidden;
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow-lg);
   }
 
   /* ── Header ───────────────────────────────────────────── */
@@ -170,8 +167,14 @@
     font-weight: 600;
     font-size: 14px;
     color: var(--text);
+    text-decoration: none;
+    transition: all 0.15s ease;
   }
+  a.doc-chip { cursor: pointer; }
+  a.doc-chip:hover { border-color: var(--gold); background: var(--gold-light); transform: translateX(2px); }
   .doc-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+  .doc-chip .chip-arrow { margin-left: auto; color: var(--text-mute); font-size: 13px; }
+  a.doc-chip:hover .chip-arrow { color: var(--navy); }
 
   .parcel-link {
     margin-left: auto;
@@ -239,7 +242,11 @@
     padding: 4px 12px;
     border-radius: 100px;
     margin: 4px 5px 0 0;
+    text-decoration: none;
+    transition: all 0.15s ease;
   }
+  a.citation-tag { cursor: pointer; }
+  a.citation-tag:hover { background: var(--gold-light); border-color: var(--gold); transform: translateY(-1px); }
   .msg.assistant .sources-used {
     margin-top: 14px;
     padding-top: 14px;
@@ -361,92 +368,104 @@
 // July 2026) and the HB 803 Legislative Update Memo. Each entry is one
 // retrievable chunk with a source label so answers can be cited.
 // ══════════════════════════════════════════════════════════════════════
+// Source documents behind each knowledge-base entry. County-hosted
+// documents link straight to the official site (always current, no
+// duplicate to maintain); internal-only documents are served as static
+// files from this same app's /docs folder.
+const DOC_LINKS = {
+  'Building Guide': '/docs/building-department-guide.pdf',
+  'HB 803 Memo': '/docs/hb803-legislative-memo.pdf',
+  '2026 Fee Schedule': '/docs/2026-fee-schedule.pdf',
+  'Comprehensive Plan': 'https://libertycountyfl.org/uploads/2026/01/Liberty-County-2012-2025-Comp-Plan-1.pdf',
+  'Land Development Code': 'https://libertycountyfl.org/uploads/2026/01/LIBERTY-COUNTY-Land-Development-Code.pdf'
+};
+
 const KNOWLEDGE_BASE = [
-  { source: "Building Guide", section: "I. New Construction — Intake Rules", text:
+  { source: "Building Guide", section: "I. New Construction — Intake Rules", page: 1, text:
     "For new construction, verify: (1) Septic/Health Dept — if no city sewer, applicant must provide a Septic Construction Permit or Existing System Approval from the Health Department before the building application is accepted. (2) Notice of Commencement — required if job value exceeds $2,500; must be recorded with the Clerk of Court and posted on the job site before the first inspection is scheduled. (3) Setbacks — Residential (Low Density): Front 20 ft, Side 20 ft, Rear 20 ft. Commercial/High-Density: Front 20 ft, Side 10 ft (20 ft for Commercial), Rear 10 ft (20 ft for Commercial)." },
-  { source: "Building Guide", section: "I. New Construction — Fees", text:
+  { source: "Building Guide", section: "I. New Construction — Fees", page: 1, text:
     "Residential Building Permit: $0.75/sq ft. Commercial Building Permit: $0.85/sq ft. Plumbing, HVAC, Gas & Mechanical: $150.00 flat. Fire Suppression/Hood/Sprinkler System: $100.00 each. Pre-Manufactured ADU (Accessory Dwelling Unit): $150.00 flat. ADU projects also require a $100.00 Tier 1 Site Plan Review to verify setbacks. Florida Law (FS 320.8249) requires a Licensed Mobile Home Installer to perform the physical setup even under an owner-builder exemption." },
-  { source: "Building Guide", section: "I. New Construction — Required Forms", text:
+  { source: "Building Guide", section: "I. New Construction — Required Forms", page: 1, text:
     "Application for Building Permit is required for every permit type; it captures owner, contractor, valuation, zoning, and utility info, and staff assigns the Permit #, Fee, and surcharges. Notice of Commencement is required when job value exceeds $2,500 (or $15,000 for HVAC changeouts); must be recorded with the Clerk of Court under Chapter 713, F.S., and physically posted at the job site before the first inspection. Owner-Builder Affidavit is required whenever a property owner acts as their own general contractor on new construction, including new homes, commercial buildings under $75,000, and farm outbuildings; the owner must appear in person and sign under FS 489.103(7); a false declaration may be a third-degree felony." },
-  { source: "Building Guide", section: "I. New Construction — 2026 Legislative Updates", text:
+  { source: "Building Guide", section: "I. New Construction — 2026 Legislative Updates", page: 1, text:
     "Under CS/CS/HB 803 (2026, effective July 1, 2026), building permits for single-family dwellings now carry a new statewide 1-year expiration, in addition to the department's existing rule that a permit is void if work isn't commenced within 6 months or is abandoned for 1 year after commencement. How these two rules interact is still pending confirmation from Kenneth Hosford — staff should currently quote both timeframes rather than assume the new rule replaces the old one. HB 803 also created new mandatory permit review deadlines: 5 business days for most existing single-family residential permits under $15,000; 10 business days for CDBG-Disaster Recovery single-family permits; 12 business days for site-specific permits under a master permit; 30 business days for residential under 7,500 sq ft; 60 business days for larger residential, signs, nonresidential under 25,000 sq ft, multifamily (\u226450 units), and site-plan/plat approvals. If the county misses a deadline without a timely deficiency notice, the permit can be deemed approved by law." },
-  { source: "Building Guide", section: "II. Electrical — Fees & Form", text:
+  { source: "Building Guide", section: "II. Electrical — Fees & Form", page: 3, text:
     "Electrical fees: Residential New Service/Upgrades $150.00, Commercial New Service/Upgrades $200.00, Outlets and Switches $50.00, Solar/Generator (Panels and Wiring) $100.00. The Electrical Affidavit is required when a property owner pulls their own electrical permit for site power only (e.g., a power pole to a vacant lot) — not connected to any habitable structure. The owner swears the service will NOT connect to a residence, mobile home, camper, RV, or living structure, and that a separate permit/inspection is required before it can. A whole-home generator needs BOTH an Electrical permit and a Gas permit with separate inspections. Solar wiring must be performed by a licensed electrical contractor even under an owner-builder exemption." },
-  { source: "Building Guide", section: "III. Renovations — Exemptions & Forms", text:
+  { source: "Building Guide", section: "III. Renovations — Exemptions & Forms", page: 4, text:
     "The $7,500 Residential Exemption (HB 803, effective July 1, 2026): work on a single-family home valued under $7,500 does not require a permit if strictly cosmetic/non-structural (flooring, cabinets, painting, drywall finishing); a Written Request for Exemption must be submitted. Electrical, plumbing, mechanical, gas, or structural work always requires a permit regardless of cost. The exemption is void in flood hazard areas, and splitting a project to duck the threshold is illegal. A SEPARATE exemption also applies to temporary residential hurricane/flood walls meeting specified standards, with no dollar threshold — pending confirmation from Kenneth Hosford on which standard applies before staff waive a permit for this. General Affidavit is a flexible notarized statement used for exemption declarations or other sworn statements without a specialized form. The Owner-Builder Affidavit also applies to renovation work (plumbing, mechanical, gas, structural improvements) — same in-person, notarized requirement as new construction." },
-  { source: "Building Guide", section: "III. Renovations — Fees", text:
+  { source: "Building Guide", section: "III. Renovations — Fees", page: 4, text:
     "Plumbing, Gas & Mechanical — Residential: $150.00. Plumbing, Gas & Mechanical — Commercial: $200.00. Windows & Siding: $50.00 flat. Bedroom additions on a septic system require a Health Department permit due to increased system load." },
-  { source: "Building Guide", section: "IV. Mobile Homes — Fees & Form", text:
+  { source: "Building Guide", section: "IV. Mobile Homes — Fees & Form", page: 6, text:
     "Mobile Home Set-Up Permit (all sizes): $300.00 flat, plus a $100.00 Tier 1 Site Plan Review. The $300 fee only covers the block, anchor, and tie-down inspection — electrical hookup requires a separate Residential Electrical permit ($150.00). A Health Department septic approval must be submitted before the application is accepted. The Mobile Home Permit Worksheet (Blocking Plans) is a required 2-page form the licensed installer completes documenting pier spacing, footer/pad sizes, tiedown components, soil test results (pocket penetrometer and torque probe), and weatherproofing, signed under Rule 15C-1/15C-2. All tests must be performed by a Licensed Mobile Home Installer, not the property owner." },
-  { source: "Building Guide", section: "IV. Mobile Homes — 2026 Legislative Update", text:
+  { source: "Building Guide", section: "IV. Mobile Homes — 2026 Legislative Update", page: 6, text:
     "Under CS/CS/HB 803 (2026, effective July 1, 2026), DBPR may not deny a building permit for certain residential manufactured buildings, and local governments may not adopt or enforce zoning, land use, or development regulations that treat offsite-constructed (manufactured) housing differently than site-built housing. The bill also adds specific permit requirements for placement of manufactured housing on mobile home lots and in single-family zoning districts. Staff should not deny or add extra conditions to a mobile home placement in a single-family zoning district solely because the home is manufactured, if it otherwise meets the same standards as a site-built home. A full zoning-code review with Kenneth Hosford is still pending to confirm Liberty County's code complies." },
-  { source: "Building Guide", section: "V. Roofing — Fees & Form", text:
+  { source: "Building Guide", section: "V. Roofing — Fees & Form", page: 7, text:
     "Roofing Permit: $50.00 for 1 to 1,000 sq ft, $100.00 for 1,000 sq ft and above. The Roof Inspection Affidavit (3rd Party) is required when a third-party inspector, rather than the county inspector, verifies roof deck nailing and/or secondary water barrier installation; it applies the Third-Party Inspection Discount. The inspector (Engineer, Architect, or FS 468 Building Inspector) certifies compliance with the Hurricane Mitigation Retrofit Manual per Section 553.844, F.S., and photos of each roof plane with the permit number/address are required. General Contractors licensed after 1973 without a separate Roofing Contractor license cannot pull or self-perform standalone roofing permits (FS 489.113)." },
-  { source: "Building Guide", section: "V. Roofing — 2026 Legislative Update (Private Providers)", text:
+  { source: "Building Guide", section: "V. Roofing — 2026 Legislative Update (Private Providers)", page: 7, text:
     "CS/CS/HB 803 (2026) substantially amended Fla. Stat. \u00a7553.791 governing private providers (third-party inspectors), effective July 1, 2026. An owner/contractor may use a private provider at any time without prior conditions and no longer must give advance inspection notice. The county's authority to re-review or re-inspect work a private provider already certified is now much narrower: staff may generally only check private-provider paperwork for completeness, not substantive code compliance, except for local ordinance, floodplain, and site-review matters. For the Roof Inspection Affidavit specifically: once a licensed private provider certifies the roof inspection, the county building official may only re-inspect if there is specific knowledge the inspection wasn't actually performed, and must give the provider written notice of that concern first. An internal policy update on how staff log/process these certifications is still pending Kenneth Hosford's sign-off." },
-  { source: "Building Guide", section: "VI. Accessory Buildings — Rules, Fees & Form", text:
+  { source: "Building Guide", section: "VI. Accessory Buildings — Rules, Fees & Form", page: 8, text:
     "Accessory structures/sheds for single-family or two-family dwellings under 120 sq ft are exempt from Site Plan Review and don't require a structural permit or fee. Fees: Pole Barn (Open) $125.00, Pole Barn (Enclosed, full or partial) $150.00, Portable Sheds/Garages 120-400 sq ft $30.00, over 400 sq ft $50.00. The Pole Barn/Accessory Structure Affidavit (No Wastewater) is required when the owner declares NO plumbing will be installed — no toilet, sink, or water connection beyond an outside spigot. If plumbing is mentioned, do NOT use this affidavit; the owner must get a Health Department septic permit first. Violating the affidavit lets the County direct the power company to disconnect electric service." },
-  { source: "Building Guide", section: "VII. Comprehensive Plan Review — Fees & Form", text:
+  { source: "Building Guide", section: "VII. Comprehensive Plan Review — Fees & Form", page: 9, text:
     "Tier 1 Site Plan Review: $100.00. Tier 2: $350.00. Property Split Review: $150.00. Comprehensive Plan Amendment (Small-Scale, under 10 acres): $1,500.00; (Large-Scale, over 10 acres): $5,000.00. Amendment to Land Development Regulations: $1,500.00. Subdivision Plat Approval: $1,000.00. Special Exception: $1,000.00. Variance: $350.00. Other Conditional Uses: $2,000.00. Special Temporary Use Permit — Commission Issued: $200.00; Staff Issued: $50.00. The 911 Address Request form is required whenever a new address is needed, or an existing address needs confirming/correcting — common for new construction, mobile home placement, or a power pole on a vacant lot. A confirmed 911 address is required before any inspection and before a Certificate of Occupancy is issued." },
-  { source: "Building Guide", section: "VII. Zoning Tips — Alcohol & River Buffers", text:
+  { source: "Building Guide", section: "VII. Zoning Tips — Alcohol & River Buffers", page: 9, text:
     "Any alcohol establishment (e.g., a package store) in a commercial zone requires a Conditional Use/Special Exception ($1,000.00) before the Board of Adjustment; if the property line is within 1,000 feet of a school, church, public playground, or residential district, it faces automatic statutory denial. Structures near the Apalachicola River, Ochlockonee River, Telogia Creek, or New River must clear a mandatory 75-foot native vegetation buffer from the ordinary high-water line, regardless of the structure's size — even a shed under the 120 sq ft exemption must still clear this buffer, verified via a $100.00 Tier 1 Site Plan Review." },
-  { source: "Building Guide", section: "VIII. Miscellaneous — Fees & 2026 Update", text:
+  { source: "Building Guide", section: "VIII. Miscellaneous — Fees & 2026 Update", page: 10, text:
     "Decks and Ramps: $100.00. Sign Permit: $100.00. Swimming Pool (all sizes): $100.00 — Florida Statute 489.103(6) excludes in-ground swimming pools from the owner-builder exemption; a Licensed Commercial Pool/Spa Contractor (CPC) is legally required. Communication Tower (Conditional Land Use): $3,500.00 + $5,000 refundable deposit. Co-Location on Existing Tower: $750.00. Under CS/CS/HB 803 (2026), a retaining wall spanning more than one lot or parcel now requires a single building permit covering the project as a whole, not a separate permit per parcel." },
-  { source: "Building Guide", section: "IX. Fee Modifiers & 2026 Legislative Updates", text:
+  { source: "Building Guide", section: "IX. Fee Modifiers & 2026 Legislative Updates", page: 11, text:
     "Plan Review Fee — Residential: $100.00; Commercial: $200.00. Third-Party Inspection Discount: 40% off permit fee (current department rate). Renewal Fee: 25% of original permit fee. Penalty for work started before permit issued: double the permit fee. Under CS/CS/HB 803 (2026), commercial permit fee reductions for private-provider use are now a statutory minimum — at least 25% off when a private provider does either plan review or inspection, at least 50% off when they do both; failing to apply the minimum forfeits the county's ability to collect any fee on that project. It's still pending review with Lisa/Shaula and Kenneth Hosford whether the department's flat 40% rate satisfies this for commercial private-provider projects. Separately, HB 803 restricts inspection fees from being based on project valuation — they must instead reflect actual cost of providing inspection services. Whether the county's $0.75/sq ft (Residential) and $0.85/sq ft (Commercial) building permit fees are affected is a pending fee-methodology question for Kenneth Hosford and finance, not something to resolve at the counter." },
-  { source: "Building Guide", section: "X. Glossary — HOA & Statewide Form Note", text:
+  { source: "Building Guide", section: "X. Glossary — HOA & Statewide Form Note", page: 12, text:
     "Under CS/CS/HB 803 (2026), amending Chapter 720, F.S. (\u00a7720.3035), a homeowners' association, architectural review committee, or similar committee may no longer require a building permit to be issued as a prerequisite for the association's own review of proposed construction. Separately, HB 803 directs the Florida Building Commission to create a standardized statewide residential and commercial permit application by July 1, 2027 — the current Application for Building Permit form is expected to be replaced within that revision cycle." },
-  { source: "Building Guide", section: "X. Glossary — Key Terms", text:
+  { source: "Building Guide", section: "X. Glossary — Key Terms", page: 12, text:
     "Setback: minimum required horizontal distance a structure must be kept from a property line. Lot Coverage: percentage of a parcel covered by roofs/buildings. Site Plan Review: administrative check of a development's layout against local rules before a permit is granted. Variance: dimensional relief from zoning granted by the Board of Adjustment only for a unique physical hardship. Conditional Use/Special Exception: a high-impact land use requiring a public hearing and Board-approved conditions. Single-Family Dwelling: one family unit, one kitchen, one electrical meter. Multifamily: 3+ separate family units (a duplex is two-family, not multifamily). Private Provider: a licensed engineer, architect, or building code administrator authorized under Fla. Stat. \u00a7553.791 to perform plan review or inspection in place of the local building department." },
-  { source: "HB 803 Memo", section: "Executive Summary", text:
+  { source: "HB 803 Memo", section: "Executive Summary", page: 1, text:
     "CS/CS/HB 803 (2026), Chapter 2026-63, Laws of Florida, was signed May 7, 2026 and took effect July 1, 2026. Beyond the well-known $7,500 nonstructural permit exemption, it also changes single-family permit expiration terms, adds mandatory permit review-time deadlines, overhauls the private provider (third-party inspection) framework, restricts how inspection fees can be calculated, adds a second no-threshold exemption for temporary hurricane/flood walls, and touches manufactured housing zoning and HOA architectural review rules." },
-  { source: "HB 803 Memo", section: "Confirmed / Already Incorporated", text:
+  { source: "HB 803 Memo", section: "Confirmed / Already Incorporated", page: 1, text:
     "The $7,500 nonstructural exemption is correctly reflected in the Building Department Guide (Section III): the threshold, the July 1, 2026 effective date, the Written Request for Exemption requirement, the anti-splitting rule, and the exclusion for electrical/plumbing/structural/mechanical/gas work and flood hazard areas are all in place and require no further changes." },
-  { source: "HB 803 Memo", section: "Items Still Pending Legal/Fee Review", text:
+  { source: "HB 803 Memo", section: "Items Still Pending Legal/Fee Review", page: 1, text:
     "Several HB 803 provisions are flagged as pending further review before staff should treat them as settled: (1) how the new 1-year single-family permit expiration interacts with the department's existing 6-month commencement rule — pending Kenneth Hosford; (2) the temporary hurricane/flood wall exemption's 'specified standards' — pending Kenneth Hosford; (3) Liberty County's zoning code compliance with the manufactured-housing nondiscrimination rule — pending a zoning code review with Kenneth Hosford; (4) whether the department's 40% Third-Party Inspection Discount satisfies HB 803's new 25%/50% statutory minimums for commercial private-provider projects — pending Lisa/Shaula and Kenneth Hosford; (5) whether the county's per-square-foot building permit fees are affected by the new inspection-fee valuation restriction — pending a cost-basis review with Kenneth Hosford and finance; (6) a tracking workflow for the new mandatory review-time deadlines — pending a supervisor-level process decision." },
 
   // ── 2026 Building Dept Fee Schedule (official PDF) ──────────────────────
-  { source: "2026 Fee Schedule", section: "Site Plan Review Tiers — Clarified", text:
+  { source: "2026 Fee Schedule", section: "Site Plan Review Tiers — Clarified", page: 2, text:
     "The official 2026 Fee Schedule clarifies which projects fall into which Site Plan Review tier. Tier 1 Application Review ($100.00) covers Single-Family Homes, Mobile Home Setups, and Simple Additions. Tier 2 Application Review ($350.00) covers Industrial, Commercial, and Multifamily projects. This is a more specific breakdown than a flat 'Tier 1 vs Tier 2' label — use project type, not just size, to sort a customer into the correct tier." },
-  { source: "2026 Fee Schedule", section: "Fee Confirmation", text:
+  { source: "2026 Fee Schedule", section: "Fee Confirmation", page: 1, text:
     "The official 2026 Building Department Fee Schedule confirms all fee amounts already reflected in the guide (Residential $0.75/sq ft, Commercial $0.85/sq ft, Mobile Home Set-Up $300 flat excluding electrical, Roofing $50/$100 by size tier, Pole Barns $125/$150, Sheds $30/$50 by size tier, Electrical fees, Comprehensive Plan Review fees, Additional Permit Rules including the 40% third-party inspection discount, 25% renewal fee, and double-fee penalty for unpermitted work already started). No discrepancies found between the Fee Schedule PDF and the Building Guide's fee tables for these items." },
-  { source: "2026 Fee Schedule", section: "Communication Tower Fee — DISCREPANCY FLAG", text:
+  { source: "2026 Fee Schedule", section: "Communication Tower Fee — DISCREPANCY FLAG", page: 3, text:
     "The 2026 Fee Schedule lists Communication Tower (Conditional Land Use) as $3,500 AND $5,000 refundable deposit, and Co-Location on Existing Tower as $750.00. However, the Liberty County Land Development Code (Chapter 8, Wireless Telecommunications Facilities) states a non-refundable application fee of $3,500.00 for a new tower and $2,000.00 for co-location (not $750), PLUS a separate $3,000.00 consultant/expert review escrow deposit, PLUS a performance security bond of at least $75,000.00 (not a $5,000 refundable deposit). These two sources do not match on the co-location fee or the deposit/bond amount. Staff should flag any communication tower or co-location application to a supervisor and confirm the correct figures with Kenneth Hosford before quoting a fee to the applicant — do not quote either source as authoritative until this is reconciled." },
-  { source: "2026 Fee Schedule", section: "Subdivision Plat Fee — Note", text:
+  { source: "2026 Fee Schedule", section: "Subdivision Plat Fee — Note", page: 2, text:
     "The Fee Schedule lists a flat $1,000.00 for Application for Subdivision Plat Approval. The Land Development Code (Section 5.3) separately describes a final record plat fee of $1,000.00 OR $25.00 per lot, whichever is greater — meaning a large subdivision could owe more than the flat $1,000 the Fee Schedule implies. For any subdivision plat with more than 40 lots, calculate both figures ($1,000 flat vs. $25 x number of lots) and charge whichever is greater, per the Land Development Code." },
 
   // ── Comprehensive Plan (2012-2025) ──────────────────────────────────────
-  { source: "Comprehensive Plan", section: "Future Land Use — Density by Category", text:
+  { source: "Comprehensive Plan", section: "Future Land Use — Density by Category", page: 1, text:
     "Per the Future Land Use Element, residential density caps by land use category: Agriculture — 1 dwelling unit per 10 acres (clustering down to 1-acre lots encouraged). Conservation/Resource Protection areas — 1 unit per 5 acres maximum, and commercial/industrial/solid waste/hazardous waste uses are prohibited entirely. Mixed Use Rural Residential — 1 unit/acre gross density cap. Mixed Use Suburban Residential — up to 2 units/acre. Rural Village — up to 4 units/acre (density varies 2-4 depending on central water/sewer availability). Town Center — up to 8 units/acre with central water and sewer, 4 with central water only, 2 with neither. These figures match the Land Development Code's per-district tables." },
-  { source: "Comprehensive Plan", section: "Wetland & Floodplain Lot Requirements", text:
+  { source: "Comprehensive Plan", section: "Wetland & Floodplain Lot Requirements", page: 5, text:
     "New residential subdivisions that include wetlands and/or floodplains must cluster development in upland areas — they cannot create lots without enough uplands to fit all structures, roadways, and a minimum 50-foot natural vegetated upland buffer. Any new lot containing wetlands or floodplain must be at least 5 acres in size, with adequate uplands to accommodate all development, and the wetland/floodplain area must be shown on the plat as undevelopable. Separately, a 75-foot native vegetation buffer (measured from the ordinary high-water line) is required adjacent to the Apalachicola River, Ochlockonee River, Telogia Creek, and New River — this is the same 75-foot river buffer already referenced in the Building Guide's zoning tips." },
-  { source: "Comprehensive Plan", section: "Wellhead Protection Zones", text:
+  { source: "Comprehensive Plan", section: "Wellhead Protection Zones", page: 6, text:
     "The County maintains wellhead protection areas around potable water wells. Zone of exclusion: no development activity is allowed within 200 feet of a wellhead. Wellhead protection area: extends 500 feet from the wellhead; within this zone, landfills, bulk storage/handling of hazardous or restricted substances, feedlots or commercial animal facilities, wastewater treatment plants, percolation ponds, mines, and excavation of waterways intersecting the water table are all prohibited. These 200 ft / 500 ft figures are confirmed identically in the Land Development Code (Section 6.4-4)." },
-  { source: "Comprehensive Plan", section: "Concurrency & Building Permits", text:
+  { source: "Comprehensive Plan", section: "Concurrency & Building Permits", page: 5, text:
     "Development orders and building permits will NOT be issued if they would cause a reduction in the adopted level-of-service (LOS) standards for facilities (roads, sanitary sewer, potable water, drainage, solid waste, recreation). Where no zoning change, subdivision, or site plan approval is required, the concurrency determination is made at the time of building permit review — no building permit shall be issued unless the facilities serving that area meet the adopted LOS standards, with a narrow exception for residential units on single platted lots of record predating the concurrency requirements. This is a standing legal basis for denying or conditioning a permit even when all other paperwork is in order." },
-  { source: "Comprehensive Plan", section: "Multilaning Road Setbacks", text:
+  { source: "Comprehensive Plan", section: "Multilaning Road Setbacks", page: 12, text:
     "For roads identified for future multilaning on the long-range transportation plan, building setbacks are the greater of: (1) 75 feet from the centerline of the existing right-of-way, or (2) 25 feet from the existing property line. Parking and retention facilities are not allowed within this designated setback area. This is separate from and in addition to the standard front-yard setbacks already in the Building Guide." },
-  { source: "Comprehensive Plan", section: "Manufactured Housing — Countywide Allowance", text:
+  { source: "Comprehensive Plan", section: "Manufactured Housing — Countywide Allowance", page: 14, text:
     "Per the Housing Element (Policy 4-1), manufactured housing units are allowed in ALL zoning categories countywide, and all types of multi-family housing are allowed in zoning categories consistent with the applicable land use category. Regulations applying to manufactured housing and mobile homes must be consistent with Sections 320.8285(5) and 553.38, Florida Statutes. This predates and is consistent with — not contradicted by — the 2026 HB 803 manufactured-housing nondiscrimination requirement already flagged elsewhere in this knowledge base." },
-  { source: "Comprehensive Plan", section: "Water Fixture Maximum-Use Standards", text:
+  { source: "Comprehensive Plan", section: "Water Fixture Maximum-Use Standards", page: 46, text:
     "All new construction and additions to existing structures must use fixtures meeting these maximum water-use limits: water closets (tank or flushometer type) 3.5 gallons/flush; urinals (tank or flushometer type) 3.5 gallons/flush; showerheads 3.5 gallons/minute; lavatory and sink faucets 2.5 gallons/minute. These are enforced through the building permit procedure." },
 
   // ── Land Development Code ───────────────────────────────────────────────
-  { source: "Land Development Code", section: "Schedule 1.0 — Minimum Setback & Height Standards", text:
+  { source: "Land Development Code", section: "Schedule 1.0 — Minimum Setback & Height Standards", page: 85, text:
     "The Land Development Code's Schedule 1.0 sets minimum building setbacks and maximum height by use type. Low Density Residential (0-6 units/acre): Front 20 ft, Side 5 ft, Rear 20 ft, max height 35 ft (no parking setback applies). Medium-High Density Residential (over 6 units/acre): Front 20 ft (parking 20 ft), Side 5 ft (parking 5 ft), Rear 20 ft (parking 10 ft), max height 45 ft. Industrial/Commercial/Office: Front 20 ft (parking 20 ft), Side 10 ft (parking 10 ft), Rear 20 ft (parking 10 ft), max height 45 ft. Corner yard setbacks match front yard setbacks in all three categories. Compare this to the Building Guide's simpler setback bullets — this Schedule 1.0 table is the authoritative, code-level source and includes the medium-high-density tier and parking setbacks the Guide doesn't break out." },
-  { source: "Land Development Code", section: "Mobile Home Park Fee", text:
+  { source: "Land Development Code", section: "Mobile Home Park Fee", page: 88, text:
     "Mobile home PARKS (as opposed to a single mobile home set-up on an individual lot) require a separate fee at the time plans are submitted: $1,000.00 OR $25.00 per mobile home space, whichever is greater. This is distinct from — and in addition to — the standard $300.00 Mobile Home Set-Up Permit used for a single home on a single lot." },
-  { source: "Land Development Code", section: "Site Plan Review — What Triggers It", text:
+  { source: "Land Development Code", section: "Site Plan Review — What Triggers It", page: 89, text:
     "A site plan review is required for: (1) all permitted uses in any district EXCEPT single-family detached dwellings, two-family dwellings, and their accessory uses/structures; (2) all special exception uses in any district; (3) building alterations or remodeling (other than single/two-family dwellings) that affect 50% or more of the floor area of the principal building, OR where the cost of the alteration exceeds 50% of the assessed value of the improvements on the site prior to the work. The County has 10 working days to determine an application's completeness and accept or reject it. An approved site plan is valid for 12 months from County Commission approval — if a development order isn't issued within that window, the site plan approval becomes null and void." },
-  { source: "Land Development Code", section: "Subdivision Minimum Design Standards", text:
+  { source: "Land Development Code", section: "Subdivision Minimum Design Standards", page: 113, text:
     "Key subdivision design minimums: minimum right-of-way width 60 feet; dead-end streets need an 80-foot minimum paved turnaround diameter (100-foot ROW diameter); lots must front on a street for at least 60 feet; corner lots must be 15% wider than the subdivision's minimum planned width; minimum lot size for a single-family dwelling is 10,000 square feet; lots of 15,000+ sq ft need a minimum average width of 100 feet, lots between 10,000-15,000 sq ft need a minimum average width of 80 feet. Private streets are normally prohibited but may be approved for Minor Subdivisions of 15 or fewer lots where every lot is 10 acres or larger." },
-  { source: "Land Development Code", section: "Subdivision Improvement & Maintenance Security", text:
+  { source: "Land Development Code", section: "Subdivision Improvement & Maintenance Security", page: 115, text:
     "Before final plat action, the developer must either complete all required improvements or post a surety/performance bond (110% of the County Engineer's estimated cost) to guarantee completion within 2 years (up to 7 years for lots sold on installment contracts). After the improvement security is released, a separate maintenance security takes over for 3 years (or until the County Engineer recommends release), set at 25% of the County Engineer's estimated improvement cost." },
-  { source: "Land Development Code", section: "Non-Conforming Use — 6-Month Discontinuance Rule", text:
+  { source: "Land Development Code", section: "Non-Conforming Use — 6-Month Discontinuance Rule", page: 37, text:
     "If a non-conforming use of a structure (or structure-and-premises combination) ceases for more than 6 consecutive months for any reason (other than governmental action preventing use), any subsequent use of that property must conform to the current zoning regulations for that district — the property loses its grandfathered non-conforming status. This is a different 6-month rule than the building-permit commencement clock; don't conflate the two when a customer asks about either." },
-  { source: "Land Development Code", section: "Sign Regulations — Size Limits", text:
+  { source: "Land Development Code", section: "Sign Regulations — Size Limits", page: 96, text:
     "On-site commercial sign size limits by area: General Commercial areas adjacent to Highway 20 or Highway 12 — up to 70 sq ft. Other Commercial areas — up to 50 sq ft. Residential neighborhoods — up to 20 sq ft. Within residential subdivisions — up to 12 sq ft. \"For sale/lease/rent\" signs are exempt from the standard Sign Permit process but capped at 6 sq ft in residential districts or 12 sq ft elsewhere. Replacement of an existing permitted sign (same location, same size, no new lighting) can be approved administratively; all new or expanded signs require full site-plan approval." },
-  { source: "Land Development Code", section: "Wireless Tower — Application Requirements", text:
+  { source: "Land Development Code", section: "Wireless Tower — Application Requirements", page: 134, text:
     "Wireless Communication Facilities are reviewed as a Special Exception/Conditional Use AND require full building permitting. They're allowed in all Future Land Use categories EXCEPT Conservation/Environmentally Sensitive areas (wetlands, floodplains). Required with the application: signed statements from the property owner and wireless provider, a scaled site plan showing all structures and natural features with measured distances to property lines, FCC license copy, NIER (radiation) level certification, and documentation of efforts to co-locate on an existing tower before proposing a new one. A fall zone of at least 110% of tower height is required, contained within the applicant's own property (or with signed consent from any neighboring property whose land falls within the zone) — if the fall zone would reach any residential structure other than the applicant's own, the application must be denied. Towers are considered abandoned (subject to required removal) after 180 consecutive days without use." },
 ];
 
@@ -661,7 +680,13 @@ function render() {
       </button>
       ${kbDropdownOpen ? `
         <div class="kb-dropdown">
-          ${uniqueSources.map(s => `<span class="doc-chip"><span class="dot"></span>${escapeHtml(s)}</span>`).join('')}
+          ${uniqueSources.map(s => {
+            const url = DOC_LINKS[s];
+            const inner = `<span class="dot"></span>${escapeHtml(s)}${url ? '<span class="chip-arrow">\u2197</span>' : ''}`;
+            return url
+              ? `<a class="doc-chip" href="${url}" target="_blank" rel="noopener">${inner}</a>`
+              : `<span class="doc-chip">${inner}</span>`;
+          }).join('')}
         </div>
       ` : ''}
       <a class="parcel-link" href="https://qpublic.schneidercorp.com/Application.aspx?App=LibertyCountyFL&Layer=Parcels&PageType=Search" target="_blank" rel="noopener">
@@ -685,7 +710,16 @@ function render() {
             ${formatBubble(m.content)}
             ${m.sources && m.sources.length ? `
               <div class="sources-used">
-                ${m.sources.map(s => `<span class="citation-tag">${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}</span>`).join('')}
+                ${m.sources.map(s => {
+                  const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}`;
+                  const url = DOC_LINKS[s.source];
+                  if (url && s.page) {
+                    return `<a class="citation-tag" href="${url}#page=${s.page}" target="_blank" rel="noopener">${label}</a>`;
+                  } else if (url) {
+                    return `<a class="citation-tag" href="${url}" target="_blank" rel="noopener">${label}</a>`;
+                  }
+                  return `<span class="citation-tag">${label}</span>`;
+                }).join('')}
               </div>
             ` : ''}
           </div>
