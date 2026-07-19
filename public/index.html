@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Liberty County Building Dept — Staff Reference Assistant</title>
+<title>Liberty County Building Dept — Permit Assistant</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#1B3A6B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -679,9 +679,12 @@ function render() {
       <div class="bell">\u{1F514}</div>
       <div class="titles">
         <div class="eyebrow">Liberty County Building Dept</div>
-        <h1>Staff Reference Assistant</h1>
+        <h1>Permit Assistant</h1>
       </div>
-      <div class="badge">Prototype \u00b7 5 documents loaded</div>
+      <div class="badge">Informational \u00b7 5 sources</div>
+    </div>
+    <div class="disclaimer" style="background:var(--gold-light);color:#5A4408;border-bottom:1px solid var(--border);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
+      General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.
     </div>
     <div class="sources-strip">
       <button class="kb-toggle ${kbDropdownOpen ? 'open' : ''}" onclick="toggleKbDropdown(event)">
@@ -746,7 +749,7 @@ function render() {
       <textarea id="questionInput" rows="1" placeholder="Ask a question, or type a parcel number to look it up..." onkeydown="handleKeydown(event)"></textarea>
       <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking\u2026' : 'Ask'}</button>
     </div>
-    <div class="disclaimer">Prototype for internal review \u2014 verify anything fee- or deadline-critical with a supervisor before relying on it with the public.</div>
+    <div class="disclaimer">Answers are drawn from Liberty County Building Department documents for general guidance only. For an official determination on any permit, fee, or code question, contact the Building Department directly.</div>
   `;
 
   const chatArea = document.getElementById('chatArea');
