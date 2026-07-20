@@ -969,13 +969,7 @@ async function init() {
 init();
 </script>
 
-<!-- ── PWA: install button + service worker ─────────────────── -->
-<button id="installBtn" hidden aria-label="Install app"
-  style="position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;align-items:center;gap:8px;
-         padding:11px 16px;border:0;border-radius:0;cursor:pointer;font:600 15px/1 var(--font,sans-serif);
-         color:#0D1E3D;background:#D9A520;box-shadow:0 8px 24px rgba(16,24,40,.28);">
-  <span style="font-size:17px;line-height:1;">⤓</span> Install app
-</button>
+<!-- ── PWA: service worker (offline + auto-update) ─────────────────── -->
 <script>
 (function () {
   // Register the service worker (required for installability).
@@ -995,41 +989,6 @@ init();
     });
   }
 
-  var btn = document.getElementById('installBtn');
-  var deferred = null;
-
-  // Already running as the installed app (any installed display mode)? Never
-  // offer to install — there's nothing to install, and it would just clutter.
-  var installedModes = ['standalone', 'minimal-ui', 'fullscreen', 'window-controls-overlay'];
-  var suppressInstall = window.navigator.standalone === true ||
-    installedModes.some(function (m) { return window.matchMedia('(display-mode: ' + m + ')').matches; });
-
-  // Chrome / Edge / Android: capture the install prompt and surface our button.
-  window.addEventListener('beforeinstallprompt', function (e) {
-    e.preventDefault();
-    deferred = e;
-    if (btn && !suppressInstall) btn.hidden = false;
-  });
-  if (btn) {
-    btn.addEventListener('click', function () {
-      if (!deferred) return;
-      deferred.prompt();
-      deferred.userChoice.finally(function () { deferred = null; btn.hidden = true; });
-    });
-  }
-  window.addEventListener('appinstalled', function () { if (btn) btn.hidden = true; });
-
-  // iOS Safari has no install prompt — show a one-time hint on how to add it.
-  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (isIOS && !suppressInstall && btn && !localStorage.getItem('bda_ios_hint')) {
-    btn.hidden = false;
-    btn.innerHTML = '<span style="font-size:17px;line-height:1;">⎋</span> Add to Home Screen';
-    btn.addEventListener('click', function () {
-      alert('To install: tap the Share button, then "Add to Home Screen".');
-      localStorage.setItem('bda_ios_hint', '1');
-      btn.hidden = true;
-    });
-  }
 })();
 </script>
 

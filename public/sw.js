@@ -2,7 +2,7 @@
 // Network-first for pages/docs so a new Railway deploy is always picked up
 // when online; falls back to cache when offline. API calls never cached.
 // Bump CACHE on any change so browsers install a fresh worker and purge the old cache.
-const CACHE = 'bda-v3';
+const CACHE = 'bda-v4';
 const SHELL = [
   '/',
   '/index.html',
