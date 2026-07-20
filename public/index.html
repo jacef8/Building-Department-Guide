@@ -968,14 +968,24 @@ init();
         console.warn('SW registration failed:', e);
       });
     });
+    // When a new service worker takes control (after a deploy), reload once so
+    // the installed app can never get stuck on a stale cached page.
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
   }
 
   var btn = document.getElementById('installBtn');
   var deferred = null;
 
-  // Already running as the installed app? Never offer to install — there's
-  // nothing to install, and it would just clutter.
-  var suppressInstall = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  // Already running as the installed app (any installed display mode)? Never
+  // offer to install — there's nothing to install, and it would just clutter.
+  var installedModes = ['standalone', 'minimal-ui', 'fullscreen', 'window-controls-overlay'];
+  var suppressInstall = window.navigator.standalone === true ||
+    installedModes.some(function (m) { return window.matchMedia('(display-mode: ' + m + ')').matches; });
 
   // Chrome / Edge / Android: capture the install prompt and surface our button.
   window.addEventListener('beforeinstallprompt', function (e) {
