@@ -255,6 +255,16 @@ app.post('/api/parcel', perIpLimiter, async (req, res) => {
 // Health check — handy for Railway
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// Friendly fallback: any other GET (a typo'd or mistyped URL) lands on the
+// public app instead of a raw "Cannot GET" error. API and doc paths keep their
+// normal 404 so real problems still surface.
+app.use((req, res) => {
+  if (req.method === 'GET' && !req.path.startsWith('/api/') && !req.path.startsWith('/docs/')) {
+    return res.redirect('/');
+  }
+  res.status(404).json({ error: 'Not found.' });
+});
+
 app.listen(PORT, () => {
   console.log(`Building Dept Assistant running on port ${PORT}`);
   if (!ANTHROPIC_API_KEY) {
