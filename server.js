@@ -5,6 +5,7 @@
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -147,8 +148,13 @@ app.get('/api/session', (req, res) => {
   res.json({ staff: isValidStaff(req), staffConfigured: !!STAFF_PASSWORD });
 });
 
-// Serve the same app shell at /staff so staff have a stable sign-in URL.
-app.get('/staff', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+// Serve the app shell at /staff with the staff manifest baked into the HTML,
+// so Edge/Chrome reliably offer to install a distinct staff app (start_url
+// /staff). Baking it into the HTML is more dependable than swapping the
+// manifest link with JS, which browsers don't always re-read for install.
+const INDEX_HTML = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+const STAFF_HTML = INDEX_HTML.replace('href="/manifest.webmanifest"', 'href="/manifest-staff.webmanifest"');
+app.get('/staff', (req, res) => res.type('html').send(STAFF_HTML));
 
 app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) => {
   if (!ANTHROPIC_API_KEY) {
