@@ -630,6 +630,12 @@ let kbDropdownOpen = false;
 let IS_STAFF = false;
 let STAFF_CONFIGURED = false;
 const ON_STAFF_ROUTE = /(^|\/)staff\/?$/.test(location.pathname) || location.hash === '#staff';
+// On the staff route, install as a distinct app whose start_url is /staff, so
+// the installed staff app opens the staff version (not the public start_url).
+if (ON_STAFF_ROUTE) {
+  const _mf = document.querySelector('link[rel="manifest"]');
+  if (_mf) _mf.href = '/manifest-staff.webmanifest';
+}
 
 // One question per document category, picked at random on each page
 // load so staff see the tool's range over time instead of the same
