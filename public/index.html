@@ -365,6 +365,170 @@
     font-weight: 500;
   }
 
+  /* ── Rich answer formatting (step-by-step guides, fee tables) ─── */
+  /* Scoped to assistant bubbles only — user bubbles are navy, and navy
+     headings on navy would disappear. */
+  .msg.assistant .bubble h4 {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--navy);
+    margin: 16px 0 7px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.01em;
+  }
+  .msg.assistant .bubble h4:first-child { margin-top: 0; }
+  .msg.assistant .bubble ul,
+  .msg.assistant .bubble ol { margin: 7px 0 12px; padding-left: 22px; }
+  .msg.assistant .bubble li { margin-bottom: 6px; line-height: 1.55; }
+  .msg.assistant .bubble li:last-child { margin-bottom: 0; }
+  .msg.assistant .bubble ol { counter-reset: none; }
+  .msg.assistant .bubble ol > li::marker { font-weight: 800; color: var(--navy); }
+  .msg.assistant .bubble strong { font-weight: 700; color: var(--navy-dark); }
+  .msg.assistant .bubble table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 8px 0 12px;
+    font-size: 15px;
+    display: block;
+    overflow-x: auto;
+  }
+  .msg.assistant .bubble th,
+  .msg.assistant .bubble td {
+    border: 1px solid var(--border);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  .msg.assistant .bubble th {
+    background: var(--bg);
+    font-weight: 700;
+    color: var(--navy);
+    white-space: nowrap;
+  }
+  .msg.assistant .bubble a {
+    color: var(--navy);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    /* long form URLs shouldn't blow out the bubble on a phone */
+    overflow-wrap: anywhere;
+  }
+  .msg.assistant .bubble a:hover { color: var(--gold); }
+
+  /* ── History ──────────────────────────────────────────── */
+  .strip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 15px;
+    font-family: var(--font);
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .strip-btn:hover { border-color: var(--gold); background: var(--gold-light); }
+  .strip-btn .count-badge {
+    background: var(--navy);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .history-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 24px;
+    right: 24px;
+    max-width: 520px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 25;
+    max-height: 62vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .history-panel .hp-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-panel .hp-head strong { font-size: 14.5px; color: var(--navy); }
+  .history-panel .hp-clear {
+    margin-left: auto;
+    background: none;
+    border: none;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--danger);
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .history-panel .hp-clear:hover { text-decoration: underline; }
+  .history-panel .hp-list { overflow-y: auto; padding: 8px; }
+  .history-panel .hp-empty {
+    padding: 22px 16px;
+    text-align: center;
+    color: var(--text-mute);
+    font-size: 14.5px;
+    line-height: 1.55;
+  }
+  .hp-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 10px 11px;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .hp-item:hover { background: var(--bg); border-color: var(--border); }
+  .hp-item.active { background: var(--gold-light); border-color: var(--gold); }
+  .hp-item .hp-body { flex: 1; min-width: 0; }
+  .hp-item .hp-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .hp-item .hp-meta { font-size: 12.5px; color: var(--text-mute); margin-top: 3px; }
+  .hp-del {
+    background: none;
+    border: none;
+    color: var(--text-mute);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .hp-del:hover { color: var(--danger); background: #FDECEC; }
+
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-thumb { background: #C7CEDA; border-radius: 8px; }
 </style>
@@ -391,6 +555,21 @@ const DOC_LINKS = {
 };
 
 const KNOWLEDGE_BASE = [
+  // ── Counter procedure ────────────────────────────────────────────────
+  // The order of operations staff actually walk applicants through. Added
+  // July 2026 from the Clerk's Office written guidance, because the printed
+  // Building Guide documents each permit on its own but never states the
+  // Planning & Zoning -> Building Permit sequence — so answers about a whole
+  // project were skipping the first step applicants have to take.
+  { source: "Office Procedure", section: "Step 1 — Planning & Zoning Permit (before any building permit)", text:
+    "Every new construction project starts with a Planning & Zoning Permit, not the building permit. The property OWNER must come into the Clerk's Office in person to apply. Once submitted, the application goes to the Apalachee Regional Planning Council (ARPC) for review, which checks the proposed project against all applicable codes — land use, zoning, setbacks, and lot standards — before any money is spent on plans or construction. Required to apply: (1) a completed application, available in the Clerk's Office or on the Liberty County BOCC website under the Building Department; (2) a copy of the property deed — the Clerk's Office can help print this; (3) a site plan, which may be hand-drawn on a blank sheet of paper, showing the location of all existing and proposed structures including the new home, the size of the home, the power pole, the septic system, the driveway, and any other improvements. Staff can help applicants with the site plan. The Planning & Zoning Permit fee is $100.00. IMPORTANT — that $100.00 IS the Tier 1 Site Plan Review / Tier 1 Application Review fee: it is ONE single $100.00 charge, not two. Never list a Planning & Zoning Permit and a Tier 1 Site Plan Review as separate line items in a fee table, and never add $100 twice for the same project. The building permit application cannot move forward until the Planning & Zoning Permit is approved. Liberty County contracts Planning & Zoning services to ARPC; the planning contact is Brianna Williams, (850) 312-3910." },
+  { source: "Office Procedure", section: "Step 2 — Building Permit (after Planning & Zoning approval)", text:
+    "Once the Planning & Zoning Permit is approved, the applicant moves to the Building Permit application. At that point they need: engineered house plans, and their contractor's information. The Building Permit fee for residential construction is $0.75 per square foot, so the total depends on the finished square footage of the home. Engineered plans are what the building review uses to confirm the structure meets Florida Building Code for wind load and structural safety." },
+  { source: "Office Procedure", section: "Pole barn houses / barndominiums — classified as a residence", text:
+    "A pole barn house or barndominium-style building that will be USED AS A RESIDENCE is considered new residential construction — it is NOT treated as an accessory pole barn or agricultural outbuilding. Because it is a dwelling, it must meet all residential building code requirements and is permitted as a home, at the residential building permit rate of $0.75 per square foot. The flat Pole Barn fee in the fee schedule ($125.00 / $150.00 by size) applies ONLY to a true accessory pole barn — a barn, shop, or storage building that nobody lives in. Do NOT quote the $125/$150 pole barn fee for a pole barn house or barndominium that will be lived in; quote the residential rate of $0.75 per square foot instead. The deciding factor is how the finished building will be used, not what it is built out of or what it looks like." },
+  { source: "Office Procedure", section: "Where the forms and records are online", text:
+    "Liberty County Board of County Commissioners website: https://libertycountyfl.org — permit applications and department information are under Growth Management (https://libertycountyfl.org/growth-management/), including the Building Department page at https://libertycountyfl.org/growth-management/building-department/. The Owner-Builder Application for Building Permit is posted at https://libertycountyfl.org/wp-content/uploads/Building-Permit-App.-Owner-Builder.pdf and the Mobile Home Permit Application at https://libertycountyfl.org/wp-content/uploads/Mobile-Home-Permit-Application.pdf. The Land Development Code is at https://libertycountyfl.org/uploads/2026/01/LIBERTY-COUNTY-Land-Development-Code.pdf and the Comprehensive Plan at https://libertycountyfl.org/uploads/2026/01/Liberty-County-2012-2025-Comp-Plan-1.pdf. To look up a property, parcel, ownership, legal description, acreage, or maps, use the Liberty County Property Appraiser: https://libertypa.org — their parcel search and mapping is also available on qPublic at https://qpublic.schneidercorp.com/Application.aspx?App=LibertyCountyFL&Layer=Parcels&PageType=Search . Liberty County does not have a separate Planning & Zoning web page; planning and zoning is handled through the Clerk's Office intake and ARPC review, so point applicants to the Building Department page or to calling the office rather than to a zoning page online. When a step involves a form or a record the applicant has to obtain, include the relevant link from this list in the answer." },
+
   { source: "Building Guide", section: "I. New Construction — Intake Rules", page: 1, text:
     "For new construction, verify: (1) Septic/Health Dept — if no city sewer, applicant must provide a Septic Construction Permit or Existing System Approval from the Health Department before the building application is accepted. (2) Notice of Commencement — required if job value exceeds $2,500; must be recorded with the Clerk of Court and posted on the job site before the first inspection is scheduled. (3) Setbacks — Residential (Low Density): Front 20 ft, Side 20 ft, Rear 20 ft. Commercial/High-Density: Front 20 ft, Side 10 ft (20 ft for Commercial), Rear 10 ft (20 ft for Commercial)." },
   { source: "Building Guide", section: "I. New Construction — Fees", page: 1, text:
@@ -523,6 +702,65 @@ function retrieveChunks(query, topN = 5) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// Whole-project questions ("what are the steps and permits for building a
+// pole barn house?", "what permits do I need and what do they cost?")
+//
+// These need different handling than a single lookup: one project touches
+// half the knowledge base at once — septic, setbacks, the notice of
+// commencement, owner-builder rules, electrical, fees — so top-5 keyword
+// retrieval reliably misses most of the sequence. Two adjustments:
+//   1. expand the query with the vocabulary the documents actually use,
+//      since applicants describe projects in their own words ("pole barn
+//      house" never appears next to "Notice of Commencement" in any doc);
+//   2. pull more chunks and ask the server for a step-by-step answer.
+// ══════════════════════════════════════════════════════════════════════
+// "dos/donts", "do's and don'ts", "dos & don'ts" — applicants write it every way
+const GUIDE_INTENT = /\b(steps?|step[- ]by[- ]step|process|procedure|walk me through|start to finish|beginning to end|checklist|what all|everything i need|do'?s\s*(?:and|&|\/)\s*don'?t?s|in order|timeline|where do i (start|begin)|how do i (get|start|go about|begin|build))\b/i;
+const NEEDS_LIST = /\b(what|which)\b[^?]{0,40}\b(permits?|forms?|paperwork|documents?|inspections?)\b[^?]{0,40}\b(do|does|will|would|are)\b/i;
+const BUILD_VERB = /\b(build|building|construct|constructing|put up|putting up|set up|setting up|install|installing|erect|add(ing)? on)\b/i;
+
+function isGuideQuestion(q) {
+  if (GUIDE_INTENT.test(q)) return true;
+  if (NEEDS_LIST.test(q)) return true;
+  // "We want to build X — what do we need?" phrasing without any keyword above
+  if (BUILD_VERB.test(q) && /\b(permits?|need|require)/i.test(q)) return true;
+  return false;
+}
+
+// Applicant wording → the vocabulary used in the source documents. Keeping
+// this as an explicit table (rather than letting the model guess) means
+// retrieval stays predictable and every expansion is reviewable by staff.
+const TOPIC_EXPANSIONS = [
+  { match: /pole barn|barndominium|barndo|metal building/i,
+    terms: 'accessory building pole barn new construction residential building permit setbacks notice of commencement owner-builder septic health department electrical certificate of occupancy site plan review' },
+  { match: /\b(house|home|dwelling|residence|cabin|single[- ]family)\b/i,
+    terms: 'new construction residential building permit setbacks septic health department notice of commencement owner-builder electrical plumbing hvac mechanical certificate of occupancy' },
+  { match: /mobile home|manufactured home|trailer|doublewide|double wide|singlewide/i,
+    terms: 'mobile home set-up licensed installer blocking tie-down site plan review septic electrical' },
+  { match: /\b(shed|carport|garage|workshop|outbuilding|barn|storage building)\b/i,
+    terms: 'accessory building setbacks accessory structure permit fee' },
+  { match: /\b(adu|accessory dwelling|mother[- ]in[- ]law|guest house)\b/i,
+    terms: 'accessory dwelling unit ADU pre-manufactured site plan review tier 1 setbacks installer' },
+  { match: /\b(remodel|renovat|addition|add a room|bathroom|kitchen|flooring|drywall)\b/i,
+    terms: 'renovations exemption 7500 residential exemption permit required plumbing mechanical structural' },
+  { match: /\broof/i, terms: 'roofing private provider inspection permit fee' },
+  { match: /\b(solar|generator|power pole|service upgrade|electric)/i, terms: 'electrical affidavit service upgrade solar generator licensed electrical contractor' },
+  { match: /\b(pool|spa)\b/i, terms: 'pools barrier permit' },
+  { match: /\bsign\b/i, terms: 'sign regulations size limits permit' },
+  { match: /\b(tower|antenna|cell)\b/i, terms: 'communication tower wireless application requirements' },
+  { match: /\b(subdivi|plat|lot split)/i, terms: 'subdivision plat minimum design standards review' },
+  { match: /\b(flood|wetland|river|creek|water)\b/i, terms: 'floodplain wetland river buffer wellhead protection' }
+];
+
+function expandQuery(question, isGuide) {
+  const extra = TOPIC_EXPANSIONS.filter(t => t.match.test(question)).map(t => t.terms);
+  // For a whole-project question, always pull in the cross-cutting steps that
+  // apply to essentially every project regardless of what's being built.
+  if (isGuide) extra.push('permit fee required form application inspection setbacks notice of commencement');
+  return extra.length ? question + ' ' + extra.join(' ') : question;
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // Parcel lookup — Florida DOR statewide parcel data (via server proxy)
 // A message is treated as a parcel lookup if it's mostly digits/dashes/
 // dots and doesn't look like a normal question (no letters other than
@@ -624,6 +862,7 @@ let messages = [];
 let isLoading = false;
 let lastError = null;
 let kbDropdownOpen = false;
+let historyOpen = false;
 
 // Mode: the public locked-down assistant by default; the fuller internal
 // assistant unlocks with the shared office password (enforced server-side).
@@ -635,6 +874,118 @@ const ON_STAFF_ROUTE = /(^|\/)staff\/?$/.test(location.pathname) || location.has
 if (ON_STAFF_ROUTE) {
   const _mf = document.querySelector('link[rel="manifest"]');
   if (_mf) _mf.href = '/manifest-staff.webmanifest';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Conversation history
+//
+// Past conversations are kept in this browser's localStorage — nothing is
+// sent to or stored on the server, so a shared front-desk machine's history
+// never leaves that machine and there's no record to manage county-side.
+// Public and staff routes use separate keys so the two never mix.
+// ══════════════════════════════════════════════════════════════════════
+const HISTORY_KEY = ON_STAFF_ROUTE ? 'bda_history_staff_v1' : 'bda_history_public_v1';
+const MAX_CONVERSATIONS = 25;   // oldest drop off past this
+const MAX_TURNS_SENT = 8;       // prior messages included as follow-up context
+
+let conversations = [];
+let activeId = null;
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    conversations = Array.isArray(parsed)
+      ? parsed.filter(c => c && Array.isArray(c.messages) && c.messages.length)
+      : [];
+  } catch (e) {
+    conversations = []; // corrupt or unavailable storage shouldn't break the app
+  }
+}
+
+function saveHistory() {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(conversations.slice(0, MAX_CONVERSATIONS)));
+  } catch (e) { /* private mode or quota — history just won't persist */ }
+}
+
+function conversationTitle(msgs) {
+  const firstAsk = msgs.find(m => m.role === 'user');
+  const t = firstAsk ? firstAsk.content.trim().replace(/\s+/g, ' ') : 'Untitled';
+  return t.length > 90 ? t.slice(0, 90) + '…' : t;
+}
+
+// Writes the live `messages` array back into the stored conversation list,
+// creating the conversation on the first question of a new thread.
+function persistActive() {
+  if (!messages.length) return;
+  let conv = conversations.find(c => c.id === activeId);
+  if (!conv) {
+    conv = { id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ts: Date.now(), messages: [] };
+    activeId = conv.id;
+    conversations.unshift(conv);
+  }
+  conv.messages = messages;
+  conv.title = conversationTitle(messages);
+  conv.updated = Date.now();
+  conversations = conversations.slice(0, MAX_CONVERSATIONS);
+  saveHistory();
+}
+
+function newConversation() {
+  messages = [];
+  activeId = null;
+  lastError = null;
+  historyOpen = false;
+  render();
+}
+
+function openConversation(id) {
+  const conv = conversations.find(c => c.id === id);
+  if (!conv) return;
+  messages = conv.messages;
+  activeId = id;
+  lastError = null;
+  historyOpen = false;
+  render();
+}
+
+function deleteConversation(id, e) {
+  if (e) e.stopPropagation();
+  conversations = conversations.filter(c => c.id !== id);
+  saveHistory();
+  if (activeId === id) { messages = []; activeId = null; }
+  render();
+}
+
+function clearHistory() {
+  if (!confirm('Clear all saved conversations on this device? This cannot be undone.')) return;
+  conversations = [];
+  activeId = null;
+  messages = [];
+  saveHistory();
+  historyOpen = false;
+  render();
+}
+
+function toggleHistory(e) {
+  if (e) e.stopPropagation();
+  historyOpen = !historyOpen;
+  kbDropdownOpen = false;
+  render();
+}
+
+function relativeTime(ts) {
+  if (!ts) return '';
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + (mins === 1 ? ' min ago' : ' mins ago');
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + (hrs === 1 ? ' hour ago' : ' hours ago');
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return days + ' days ago';
+  return new Date(ts).toLocaleDateString();
 }
 
 // One question per document category, picked at random on each page
@@ -667,6 +1018,14 @@ const SUGGESTION_POOL = {
     "What's the minimum lot size for a single-family home?",
     "What triggers a site plan review?",
     "What's the fee for a mobile home park?"
+  ],
+  // Whole-project walkthroughs — the questions applicants actually ask at
+  // the counter, phrased the way they ask them.
+  'Step-by-step': [
+    "What are the steps and permits for building a pole barn house?",
+    "What permits do I need to build a house, and what does each one cost?",
+    "Walk me through setting up a mobile home start to finish",
+    "What's the process for building a shed, and what are the dos and don'ts?"
   ]
 };
 
@@ -692,11 +1051,112 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// Lightweight markdown renderer — just the subset the assistant actually
+// emits: headings, bullet/numbered lists, **bold**, and simple pipe tables
+// (used for fee breakdowns). Everything is HTML-escaped BEFORE any markup is
+// added, so nothing in a model answer can inject markup.
+// Only http(s) links are ever turned into anchors, so a model answer can't
+// produce a javascript: or data: link. Input is already HTML-escaped.
+function safeLink(url, label) {
+  if (!/^https?:\/\//i.test(url)) return label;
+  return `<a href="${url}" target="_blank" rel="noopener">${label}</a>`;
+}
+
+function inlineMd(escaped) {
+  return escaped
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    // [label](https://…)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (m, label, url) => safeLink(url, label))
+    // bare URLs that aren't already inside an href
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/gi, (m, pre, url) => {
+      const trailing = url.match(/[.,;:]+$/);           // don't swallow sentence punctuation
+      const clean = trailing ? url.slice(0, -trailing[0].length) : url;
+      return pre + safeLink(clean, clean) + (trailing ? trailing[0] : '');
+    });
+}
+
+function isTableDivider(line) {
+  return /^\|?[\s:|-]*-[\s:|-]*\|?$/.test(line) && line.includes('-');
+}
+
+function splitRow(line) {
+  return line.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+}
+
 function formatBubble(text) {
-  return escapeHtml(text)
-    .split(/\n\n+/)
-    .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-    .join('');
+  const lines = escapeHtml(text).split('\n');
+  const out = [];
+  let para = [];
+  let list = null; // { tag: 'ul' | 'ol', items: [] }
+
+  const flushPara = () => {
+    if (para.length) { out.push(`<p>${inlineMd(para.join('<br>'))}</p>`); para = []; }
+  };
+  const flushList = () => {
+    if (list) {
+      out.push(`<${list.tag}>${list.items.map(i => `<li>${inlineMd(i)}</li>`).join('')}</${list.tag}>`);
+      list = null;
+    }
+  };
+  const flushAll = () => { flushPara(); flushList(); };
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const line = raw.trim();
+
+    if (!line) { flushAll(); continue; }
+
+    // Pipe table: a header row followed by a |---|---| divider
+    if (line.includes('|') && i + 1 < lines.length && isTableDivider(lines[i + 1].trim())) {
+      flushAll();
+      const head = splitRow(line);
+      const rows = [];
+      i += 2; // skip the divider
+      while (i < lines.length && lines[i].trim().includes('|')) {
+        rows.push(splitRow(lines[i].trim()));
+        i++;
+      }
+      i--; // the outer loop advances again
+      out.push(
+        '<table><thead><tr>' + head.map(h => `<th>${inlineMd(h)}</th>`).join('') + '</tr></thead>' +
+        '<tbody>' + rows.map(r => `<tr>${r.map(c => `<td>${inlineMd(c)}</td>`).join('')}</tr>`).join('') +
+        '</tbody></table>'
+      );
+      continue;
+    }
+
+    // Heading: "## Text", or a short line that is entirely bold
+    const hashHeading = line.match(/^#{1,6}\s+(.*)$/);
+    const boldHeading = line.match(/^\*\*(.+?)\*\*:?$/);
+    if (hashHeading || boldHeading) {
+      flushAll();
+      out.push(`<h4>${inlineMd((hashHeading ? hashHeading[1] : boldHeading[1]).trim())}</h4>`);
+      continue;
+    }
+
+    // List items
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    const numbered = line.match(/^\d{1,2}[.)]\s+(.*)$/);
+    if (bullet || numbered) {
+      const tag = bullet ? 'ul' : 'ol';
+      flushPara();
+      if (!list || list.tag !== tag) { flushList(); list = { tag, items: [] }; }
+      list.items.push((bullet ? bullet[1] : numbered[1]).trim());
+      continue;
+    }
+
+    // Continuation of the previous list item (indented wrap)
+    if (list && /^\s{2,}/.test(raw)) {
+      list.items[list.items.length - 1] += ' ' + line;
+      continue;
+    }
+
+    flushList();
+    para.push(line);
+  }
+
+  flushAll();
+  return out.join('');
 }
 
 function render() {
@@ -710,7 +1170,7 @@ function render() {
         <div class="eyebrow">Liberty County Building Dept</div>
         <h1>Permit Assistant</h1>
       </div>
-      <div class="badge">${IS_STAFF ? 'Staff mode' : 'Informational \u00b7 6 sources'}</div>
+      <div class="badge">${IS_STAFF ? 'Staff mode' : `Informational \u00b7 ${uniqueSources.length} sources`}</div>
     </div>
     ${IS_STAFF ? `
       <div class="disclaimer" style="background:#EAF1FB;color:#1B3A6B;border-bottom:1px solid var(--border);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
@@ -736,6 +1196,33 @@ function render() {
           }).join('')}
         </div>
       ` : ''}
+      <button class="strip-btn" onclick="toggleHistory(event)" title="Past questions saved on this device">
+        \u{1F553} History${conversations.length ? ` <span class="count-badge">${conversations.length}</span>` : ''}
+      </button>
+      ${messages.length ? `<button class="strip-btn" onclick="newConversation()" title="Start a new conversation">+ New</button>` : ''}
+      ${historyOpen ? `
+        <div class="history-panel" onclick="event.stopPropagation()">
+          <div class="hp-head">
+            <strong>Saved on this device</strong>
+            ${conversations.length ? `<button class="hp-clear" onclick="clearHistory()">Clear all</button>` : ''}
+          </div>
+          ${conversations.length ? `
+            <div class="hp-list">
+              ${conversations.map(c => `
+                <div class="hp-item ${c.id === activeId ? 'active' : ''}" onclick="openConversation('${c.id}')">
+                  <div class="hp-body">
+                    <div class="hp-title">${escapeHtml(c.title || conversationTitle(c.messages))}</div>
+                    <div class="hp-meta">${escapeHtml(relativeTime(c.updated || c.ts))} \u00B7 ${c.messages.filter(m => m.role === 'user').length} question${c.messages.filter(m => m.role === 'user').length === 1 ? '' : 's'}</div>
+                  </div>
+                  <button class="hp-del" title="Delete this conversation" onclick="deleteConversation('${c.id}', event)">\u00D7</button>
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div class="hp-empty">No saved conversations yet.<br>Questions you ask are kept here on this device so you can come back to them.</div>
+          `}
+        </div>
+      ` : ''}
       <a class="parcel-link" href="https://qpublic.schneidercorp.com/Application.aspx?App=LibertyCountyFL&Layer=Parcels&PageType=Search" target="_blank" rel="noopener">
         \u{1F5FA}\uFE0F Look up a parcel
       </a>
@@ -745,7 +1232,7 @@ function render() {
         <div class="empty-state">
           <div class="icon">\u{1F4DA}</div>
           <h2>Ask about permits, fees, or forms</h2>
-          <p>Answers only from the Building Department Guide, the Permit Eligibility Guide, the Comprehensive Plan, the Land Development Code, the Fee Schedule, and the HB 803 memo. Type a parcel number directly to pull its designation from Florida's statewide parcel data.</p>
+          <p>Answers only from the Building Department Guide, the Permit Eligibility Guide, the Comprehensive Plan, the Land Development Code, the Fee Schedule, and the HB 803 memo. Ask about a whole project — "what are the steps and permits for building a pole barn house?" — to get a step-by-step walkthrough with an estimated fee breakdown. Type a parcel number directly to pull its designation from Florida's statewide parcel data.</p>
           <div class="suggestion-row">
             ${SUGGESTIONS.map(s => `<button class="suggestion-chip" onclick="askSuggestion(this)">${escapeHtml(s)}</button>`).join('')}
           </div>
@@ -800,11 +1287,13 @@ function toggleKbDropdown(e) {
   render();
 }
 
-// Close the dropdown if the user clicks anywhere outside it
+// Close the dropdown / history panel if the user clicks anywhere outside them
 document.addEventListener('click', (e) => {
-  if (!kbDropdownOpen) return;
-  if (e.target.closest('.kb-toggle') || e.target.closest('.kb-dropdown')) return;
+  if (!kbDropdownOpen && !historyOpen) return;
+  if (e.target.closest('.kb-toggle') || e.target.closest('.kb-dropdown') ||
+      e.target.closest('.strip-btn') || e.target.closest('.history-panel')) return;
   kbDropdownOpen = false;
+  historyOpen = false;
   render();
 });
 
@@ -838,6 +1327,7 @@ async function sendQuestion() {
 
   isLoading = false;
   input.value = '';
+  persistActive();
   render();
 }
 
@@ -864,20 +1354,39 @@ async function runParcelLookup(parcelId) {
 
 async function runKnowledgeBaseQuestion(question) {
   try {
-    const relevantChunks = retrieveChunks(question, 5);
+    const isGuide = isGuideQuestion(question);
+
+    // A short follow-up ("what about commercial?", "how much is that?")
+    // carries almost no retrievable keywords on its own, so fold in the
+    // previous question when searching the knowledge base.
+    const priorAsks = messages.filter(m => m.role === 'user').slice(0, -1);
+    const retrievalBase = (tokenize(question).length < 5 && priorAsks.length)
+      ? priorAsks[priorAsks.length - 1].content + ' ' + question
+      : question;
+
+    // Whole-project questions touch many sections at once, so they get a
+    // wider net; single lookups stay tight to avoid diluting the context.
+    const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 16 : 5);
     const contextText = relevantChunks.length
       ? relevantChunks.map(c => `[${c.source} \u2014 ${c.section}]\n${c.text}`).join('\n\n---\n\n')
       : '';
 
+    // Prior turns so follow-up questions make sense. Only the plain text is
+    // sent \u2014 never the citations or any local metadata.
+    const priorTurns = messages.slice(0, -1).slice(-MAX_TURNS_SENT)
+      .map(m => ({ role: m.role, content: m.content }));
+
     // The instructions/guardrails live on the server and are chosen by mode
-    // (public vs. staff) \u2014 the browser only sends the question and the
-    // retrieved reference material.
+    // (public vs. staff) \u2014 the browser only sends the question, the
+    // retrieved reference material, and the conversation so far.
     const response = await fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         question: question,
         context: contextText,
+        history: priorTurns,
+        intent: isGuide ? 'guide' : 'single',
         mode: IS_STAFF ? 'staff' : 'public'
       })
     });
@@ -956,6 +1465,7 @@ async function staffLogout() {
 // staff version. Every other URL is always public, no matter what cookie the
 // browser is holding.
 async function init() {
+  loadHistory();
   if (ON_STAFF_ROUTE) {
     try {
       const r = await fetch('/api/session');
