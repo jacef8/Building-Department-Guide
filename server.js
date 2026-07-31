@@ -223,7 +223,7 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
   // client is treated strictly as data and length-capped. Any client-supplied
   // "system" field is ignored.
   const refMaterial = (typeof context === 'string' && context.trim())
-    ? context.slice(0, 24000)
+    ? context.slice(0, 32000)
     : 'No closely matching reference material was found in the knowledge base.';
   const isGuide = intent === 'guide';
   const guardrails = (req.isStaff ? STAFF_GUARDRAILS : PUBLIC_GUARDRAILS)
@@ -246,23 +246,68 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
         // fit in the single-answer budget.
         max_tokens: isGuide ? 2500 : 1000,
         system: systemPrompt,
-        messages: [...priorTurns, { role: 'user', content: question.slice(0, 2000) }]
+        messages: [...priorTurns, { role: 'user', content: question.slice(0, 2000) }],
+        stream: true
       })
     });
 
-    if (!anthropicResponse.ok) {
-      const errText = await anthropicResponse.text();
+    // Failures here happen before any streaming has started, so they can still
+    // be reported as ordinary JSON with a status code.
+    if (!anthropicResponse.ok || !anthropicResponse.body) {
+      const errText = await anthropicResponse.text().catch(() => '');
       console.error('Anthropic API error:', anthropicResponse.status, errText);
       return res.status(502).json({ error: `Anthropic API returned status ${anthropicResponse.status}` });
     }
 
-    const data = await anthropicResponse.json();
-    const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
-    const answer = textBlocks.join('\n\n');
+    // Relay the model's output to the browser as it arrives, so a long
+    // step-by-step answer starts appearing in about a second instead of the
+    // user waiting out the whole generation. X-Accel-Buffering keeps a
+    // proxy (Railway's included) from buffering the stream back into one lump.
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    if (res.flushHeaders) res.flushHeaders();
 
-    res.json({ answer });
+    const reader = anthropicResponse.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE frames are separated by a blank line; keep any partial tail.
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop();
+
+        for (const frame of frames) {
+          const dataLine = frame.split('\n').find(l => l.startsWith('data:'));
+          if (!dataLine) continue;
+          let evt;
+          try { evt = JSON.parse(dataLine.slice(5).trim()); } catch (e) { continue; }
+
+          if (evt.type === 'content_block_delta' && evt.delta && evt.delta.type === 'text_delta') {
+            res.write(`data: ${JSON.stringify({ text: evt.delta.text })}\n\n`);
+          } else if (evt.type === 'error') {
+            const msg = (evt.error && evt.error.message) || 'The assistant stopped unexpectedly.';
+            console.error('Anthropic stream error:', msg);
+            res.write(`data: ${JSON.stringify({ error: msg })}\n\n`);
+          }
+        }
+      }
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    } catch (streamErr) {
+      console.error('Stream relay error:', streamErr);
+      // Headers are already sent, so report the failure inside the stream.
+      res.write(`data: ${JSON.stringify({ error: 'The connection was interrupted before the answer finished.' })}\n\n`);
+    }
+    res.end();
   } catch (err) {
     console.error('Proxy error:', err);
+    if (res.headersSent) return res.end();
     res.status(500).json({ error: 'Failed to reach Anthropic API from the server.' });
   }
 });
