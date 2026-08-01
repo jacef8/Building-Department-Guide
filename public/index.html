@@ -1394,6 +1394,7 @@ async function runKnowledgeBaseQuestion(question) {
         context: contextText,
         history: priorTurns,
         intent: isGuide ? 'guide' : 'single',
+        stream: true,
         mode: IS_STAFF ? 'staff' : 'public'
       })
     });

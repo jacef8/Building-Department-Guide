@@ -214,7 +214,12 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
     return res.status(500).json({ error: 'Server is missing ANTHROPIC_API_KEY. Set it in Railway environment variables.' });
   }
 
-  const { question, context, history, intent } = req.body || {};
+  const { question, context, history, intent, stream } = req.body || {};
+  // Streaming is opt-in, because an installed PWA can still be running an
+  // older cached page after a deploy. Only a client that asks for a stream
+  // gets one; anything else — including every pre-streaming build — keeps
+  // receiving the plain {answer} JSON it knows how to parse.
+  const wantsStream = stream === true;
   if (!question || typeof question !== 'string') {
     return res.status(400).json({ error: 'Missing "question" in request body.' });
   }
@@ -247,7 +252,7 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
         max_tokens: isGuide ? 2500 : 1000,
         system: systemPrompt,
         messages: [...priorTurns, { role: 'user', content: question.slice(0, 2000) }],
-        stream: true
+        stream: wantsStream
       })
     });
 
@@ -257,6 +262,13 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
       const errText = await anthropicResponse.text().catch(() => '');
       console.error('Anthropic API error:', anthropicResponse.status, errText);
       return res.status(502).json({ error: `Anthropic API returned status ${anthropicResponse.status}` });
+    }
+
+    // Older clients: collect the whole answer and reply in the original shape.
+    if (!wantsStream) {
+      const data = await anthropicResponse.json();
+      const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
+      return res.json({ answer: textBlocks.join('\n\n') });
     }
 
     // Relay the model's output to the browser as it arrives, so a long
