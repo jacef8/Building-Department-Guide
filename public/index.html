@@ -894,16 +894,14 @@ if (ON_STAFF_ROUTE) {
 // the staff member started. A member of the public opening the app on a shared
 // counter machine never sees it, even if that browser holds a staff cookie.
 // ══════════════════════════════════════════════════════════════════════
-// Streaming works against a stubbed API but died in production after the first
-// delta, on Railway's Node 18 — whose global fetch is experimental and is known
-// to drop long-lived streaming response bodies. package.json now requires Node
-// 22, which should fix it.
+// Streaming died in production on Railway's Node 18, whose global fetch is
+// experimental and is known to drop long-lived streaming response bodies: the
+// first delta arrived and the upstream body then died. package.json now
+// requires Node 22 (the build log confirms 22.23.1), so it's on by default.
 //
-// Until that's confirmed on the live site, streaming stays OFF for everyone by
-// default and is opt-in per visit with ?stream=1 — so it can be tested without
-// risking a half-finished answer in front of an applicant. Once a ?stream=1
-// answer comes through complete, change this to `true` to turn it on for all.
-const STREAMING_ENABLED = /[?&]stream=1\b/.test(location.search);
+// ?stream=0 forces it off for a single visit — the quick way to tell a
+// streaming problem apart from an answer-quality one without a deploy.
+const STREAMING_ENABLED = !/[?&]stream=0\b/.test(location.search);
 
 const PREVIEW_FLAG = 'bda_preview_from_staff';
 
