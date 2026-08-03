@@ -879,6 +879,41 @@ if (ON_STAFF_ROUTE) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
+// Staff <-> public preview (for testing)
+//
+// The version is still decided purely by the URL — this only adds the
+// navigation. The "back to staff" link is remembered in sessionStorage, which
+// is per-tab/per-window and dies with it, so it appears only inside a preview
+// the staff member started. A member of the public opening the app on a shared
+// counter machine never sees it, even if that browser holds a staff cookie.
+// ══════════════════════════════════════════════════════════════════════
+// Streaming is built and works against a stubbed API, but in production the
+// upstream connection drops after the first delta ("The connection was
+// interrupted before the answer finished"), leaving a one-word answer. Until
+// that's diagnosed from the Railway logs, ask the server for a complete answer
+// instead — slower to appear, but correct. Flip to true to re-enable; the
+// server supports both and decides per request.
+const STREAMING_ENABLED = false;
+
+const PREVIEW_FLAG = 'bda_preview_from_staff';
+
+function readPreviewFlag() {
+  try { return sessionStorage.getItem(PREVIEW_FLAG) === '1'; } catch (e) { return false; }
+}
+
+const PREVIEWING_PUBLIC = !ON_STAFF_ROUTE && readPreviewFlag();
+
+function previewPublic() {
+  try { sessionStorage.setItem(PREVIEW_FLAG, '1'); } catch (e) { /* preview link just won't show */ }
+  location.href = '/';
+}
+
+function returnToStaff() {
+  try { sessionStorage.removeItem(PREVIEW_FLAG); } catch (e) {}
+  location.href = '/staff';
+}
+
+// ══════════════════════════════════════════════════════════════════════
 // Conversation history
 //
 // Past conversations are kept in this browser's localStorage — nothing is
@@ -1179,9 +1214,17 @@ function render() {
     </div>
     ${IS_STAFF ? `
       <div class="disclaimer" style="background:#EAF1FB;color:#1B3A6B;border-bottom:1px solid var(--border);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
-        Internal staff assistant \u2014 not the public version. <a href="#" onclick="staffLogout();return false;" style="color:#1B3A6B;font-weight:600;">Sign out</a>
+        Internal staff assistant \u2014 not the public version.
+        <a href="#" onclick="previewPublic();return false;" style="color:#1B3A6B;font-weight:600;">See public version</a> \u00b7
+        <a href="#" onclick="staffLogout();return false;" style="color:#1B3A6B;font-weight:600;">Sign out</a>
       </div>
     ` : `
+      ${PREVIEWING_PUBLIC ? `
+        <div class="disclaimer" style="background:#1B3A6B;color:#fff;padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
+          Previewing the public version \u2014 answers use the public guardrails.
+          <a href="#" onclick="returnToStaff();return false;" style="color:var(--gold-light);font-weight:700;">Back to staff</a>
+        </div>
+      ` : ''}
       <div class="disclaimer" style="background:var(--gold-light);color:#5A4408;border-bottom:1px solid var(--border);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
         General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.
       </div>
@@ -1394,7 +1437,7 @@ async function runKnowledgeBaseQuestion(question) {
         context: contextText,
         history: priorTurns,
         intent: isGuide ? 'guide' : 'single',
-        stream: true,
+        stream: STREAMING_ENABLED,
         mode: IS_STAFF ? 'staff' : 'public'
       })
     });
