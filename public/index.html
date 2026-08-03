@@ -887,13 +887,16 @@ if (ON_STAFF_ROUTE) {
 // the staff member started. A member of the public opening the app on a shared
 // counter machine never sees it, even if that browser holds a staff cookie.
 // ══════════════════════════════════════════════════════════════════════
-// Streaming is built and works against a stubbed API, but in production the
-// upstream connection drops after the first delta ("The connection was
-// interrupted before the answer finished"), leaving a one-word answer. Until
-// that's diagnosed from the Railway logs, ask the server for a complete answer
-// instead — slower to appear, but correct. Flip to true to re-enable; the
-// server supports both and decides per request.
-const STREAMING_ENABLED = false;
+// Streaming works against a stubbed API but died in production after the first
+// delta, on Railway's Node 18 — whose global fetch is experimental and is known
+// to drop long-lived streaming response bodies. package.json now requires Node
+// 22, which should fix it.
+//
+// Until that's confirmed on the live site, streaming stays OFF for everyone by
+// default and is opt-in per visit with ?stream=1 — so it can be tested without
+// risking a half-finished answer in front of an applicant. Once a ?stream=1
+// answer comes through complete, change this to `true` to turn it on for all.
+const STREAMING_ENABLED = /[?&]stream=1\b/.test(location.search);
 
 const PREVIEW_FLAG = 'bda_preview_from_staff';
 
