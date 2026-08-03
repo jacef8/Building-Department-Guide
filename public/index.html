@@ -564,7 +564,7 @@ const KNOWLEDGE_BASE = [
   { source: "Office Procedure", section: "Step 1 — Planning & Zoning Permit (before any building permit)", text:
     "Every new construction project starts with a Planning & Zoning Permit, not the building permit. The property OWNER must come into the Clerk's Office in person to apply. Once submitted, the application goes to the Apalachee Regional Planning Council (ARPC) for review, which checks the proposed project against all applicable codes — land use, zoning, setbacks, and lot standards — before any money is spent on plans or construction. Required to apply: (1) a completed application, available in the Clerk's Office or on the county's Building Department page at https://libertycountyfl.org/growth-management/building-department/ ; (2) a copy of the property deed — the Clerk's Office can help print this; (3) a site plan, which may be hand-drawn on a blank sheet of paper, showing the location of all existing and proposed structures including the new home, the size of the home, the power pole, the septic system, the driveway, and any other improvements. Staff can help applicants with the site plan. The Planning & Zoning Permit fee is $100.00. IMPORTANT — that $100.00 IS the Tier 1 Site Plan Review / Tier 1 Application Review fee: it is ONE single $100.00 charge, not two. Never list a Planning & Zoning Permit and a Tier 1 Site Plan Review as separate line items in a fee table, and never add $100 twice for the same project. The building permit application cannot move forward until the Planning & Zoning Permit is approved. CONTACT ROUTING: direct every question, every application, and every follow-up to the Liberty County Building Department at (850) 643-2215. ARPC is named only to explain who performs the code review — never give out ARPC's phone number, email address, or the name of anyone who works there, and never tell an applicant to contact ARPC, a planner, or any outside agency directly. Applicants apply and follow up through the Building Department, not through ARPC." },
   { source: "Office Procedure", section: "Residential plan review fee — do not quote", text:
-    "The fee documents list TWO separate $100.00 review fees that both appear to apply to a single-family home: the Tier 1 Site Plan Review (which is the Planning & Zoning Permit fee) and a separate 'Plan Review Fee — Residential'. The department has confirmed that one of those two figures is incorrect and the source documents are being corrected. Until that is resolved: quote the $100.00 Planning & Zoning Permit fee ONLY, and do NOT include a separate residential plan review line in any fee estimate or total for a house or other residential project — quoting both would overstate the cost by $100.00. If someone asks specifically about a residential plan review fee, do not state a figure; invite them to confirm the current amount with the Building Department at (850) 643-2215." },
+    "The fee documents list TWO separate $100.00 review fees that both appear to apply to a single-family home: the Tier 1 Site Plan Review (which is the Planning & Zoning Permit fee) and a separate 'Plan Review Fee — Residential'. The department has confirmed that one of those two figures is incorrect and the source documents are being corrected. Until that is resolved: quote the $100.00 Planning & Zoning Permit fee ONLY, and do NOT include a separate residential plan review line in any fee estimate or total for a house or other residential project — quoting both would overstate the cost by $100.00. If someone asks specifically about a residential plan review fee, do not state a figure; invite them to confirm the current amount with the Building Department at (850) 643-2215. THIS NOTE IS INTERNAL. Never tell a member of the public that a fee is disputed, incorrect, under review, or being corrected, and never mention that the documents disagree — simply give the $100.00 Planning & Zoning fee and warmly invite them to call to confirm their exact total. Staff may be told plainly that the second figure is unsettled." },
   { source: "Office Procedure", section: "Step 2 — Building Permit (after Planning & Zoning approval)", text:
     "Once the Planning & Zoning Permit is approved, the applicant moves to the Building Permit application. At that point they need: engineered house plans, and their contractor's information. The Building Permit fee for residential construction is $0.75 per square foot, so the total depends on the finished square footage of the home. Engineered plans are what the building review uses to confirm the structure meets Florida Building Code for wind load and structural safety." },
   { source: "Office Procedure", section: "Pole barn houses / barndominiums — classified as a residence", text:
@@ -755,11 +755,18 @@ const TOPIC_EXPANSIONS = [
 ];
 
 function expandQuery(question, isGuide) {
+  // Expansion is ONLY for whole-project questions, which need a wide net across
+  // many sections. Applying it to a narrow lookup actively hurts: "what's the
+  // minimum lot size for a single-family home?" would match the house
+  // expansion, flood the query with new-construction vocabulary, and push the
+  // one chunk that actually answers it out of the top 5.
+  if (!isGuide) return question;
+
   const extra = TOPIC_EXPANSIONS.filter(t => t.match.test(question)).map(t => t.terms);
-  // For a whole-project question, always pull in the cross-cutting steps that
-  // apply to essentially every project regardless of what's being built.
-  if (isGuide) extra.push('permit fee required form application inspection setbacks notice of commencement');
-  return extra.length ? question + ' ' + extra.join(' ') : question;
+  // Always pull in the cross-cutting steps that apply to essentially every
+  // project regardless of what's being built.
+  extra.push('permit fee required form application inspection setbacks notice of commencement');
+  return question + ' ' + extra.join(' ');
 }
 
 // ══════════════════════════════════════════════════════════════════════
