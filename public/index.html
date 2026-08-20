@@ -417,6 +417,67 @@
   }
   .msg.assistant .bubble a:hover { color: var(--gold); }
 
+  /* ── Attachments ──────────────────────────────────────── */
+  .attach-btn {
+    flex-shrink: 0;
+    width: 50px; height: 50px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: white;
+    font-size: 21px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--navy);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .attach-btn:hover:not(:disabled) { border-color: var(--gold); background: var(--gold-light); }
+  .attach-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .attach-tray {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 24px 0;
+    background: white;
+  }
+  .attach-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px 7px 11px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    max-width: 300px;
+  }
+  .attach-chip .kind { font-size: 15px; line-height: 1; }
+  .attach-chip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .attach-chip .sz { color: var(--text-mute); font-weight: 500; font-size: 12.5px; }
+  .attach-chip .rm {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-mute); font-size: 16px; line-height: 1;
+    padding: 2px 4px; border-radius: 4px;
+  }
+  .attach-chip .rm:hover { color: var(--danger); background: #FDECEC; }
+
+  /* attachments listed inside a sent message */
+  .msg .sent-files { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 9px; }
+  .msg.user .sent-files .f {
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.28);
+    color: #fff;
+    border-radius: 5px; padding: 4px 10px; font-size: 13px; font-weight: 600;
+  }
+
+  .chat.dropping {
+    outline: 3px dashed var(--gold);
+    outline-offset: -10px;
+    background: var(--gold-light);
+  }
+
   /* ── History ──────────────────────────────────────────── */
   .strip-btn {
     display: inline-flex;
@@ -901,6 +962,124 @@ if (ON_STAFF_ROUTE) {
 // streaming problem apart from an answer-quality one without a deploy.
 const STREAMING_ENABLED = !/[?&]stream=0\b/.test(location.search);
 
+// ══════════════════════════════════════════════════════════════════════
+// Attachments — a plan, a site sketch, or a photo for the assistant to look at
+//
+// Files are read in the browser, sent as base64 with the question, and never
+// stored anywhere: not on the server, and not in this browser's history (only
+// the file NAME is kept, so a saved conversation stays small and a plan set
+// isn't sitting in localStorage on a shared counter machine).
+// ══════════════════════════════════════════════════════════════════════
+const MAX_FILES = 5;
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+// Staff always; the public page only if the server says uploads are open.
+let UPLOADS_ENABLED = false;
+let pendingAttachments = [];
+
+function formatBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return Math.round(n / 1024) + ' KB';
+  return (n / 1048576).toFixed(1) + ' MB';
+}
+
+function readAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject(new Error('could not be read'));
+    // readAsDataURL gives "data:<type>;base64,<data>" — keep only the data.
+    r.onload = () => resolve(String(r.result).split(',')[1] || '');
+    r.readAsDataURL(file);
+  });
+}
+
+async function addFiles(fileList) {
+  if (!UPLOADS_ENABLED) return;
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  const problems = [];
+  for (const file of files) {
+    const type = (file.type || '').toLowerCase();
+    const isDoc = type === 'application/pdf';
+    const isImage = IMAGE_TYPES.includes(type);
+
+    if (!isDoc && !isImage) {
+      problems.push(`"${file.name}" isn't a PDF or a picture.`);
+      continue;
+    }
+    if (pendingAttachments.length >= MAX_FILES) {
+      problems.push(`Only ${MAX_FILES} files can be attached at once.`);
+      break;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      problems.push(`"${file.name}" is ${formatBytes(file.size)} — the limit is ${MAX_FILE_BYTES / 1048576} MB per file.`);
+      continue;
+    }
+    const total = pendingAttachments.reduce((sum, a) => sum + a.size, 0);
+    if (total + file.size > MAX_TOTAL_BYTES) {
+      problems.push('Those files add up to more than ' + (MAX_TOTAL_BYTES / 1048576) + ' MB in total.');
+      break;
+    }
+
+    try {
+      const data = await readAsBase64(file);
+      if (!data) throw new Error('empty');
+      pendingAttachments.push({
+        name: file.name || (isDoc ? 'document.pdf' : 'image'),
+        mediaType: type,
+        kind: isDoc ? 'document' : 'image',
+        size: file.size,
+        data
+      });
+    } catch (e) {
+      problems.push(`"${file.name}" could not be read.`);
+    }
+  }
+
+  lastError = problems.length ? problems.join(' ') : null;
+  render();
+}
+
+function removeAttachment(i) {
+  pendingAttachments.splice(i, 1);
+  render();
+}
+
+function handleFilePick(e) {
+  addFiles(e.target.files);
+  e.target.value = ''; // so picking the same file twice still fires onchange
+}
+
+// Screenshots and phone photos are usually pasted, not picked from a folder.
+function handlePaste(e) {
+  if (!UPLOADS_ENABLED || !e.clipboardData) return;
+  const files = Array.from(e.clipboardData.files || []);
+  if (files.length) { e.preventDefault(); addFiles(files); }
+}
+
+// Drag a file anywhere onto the chat.
+document.addEventListener('dragover', (e) => {
+  if (!UPLOADS_ENABLED || !e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes('Files')) return;
+  e.preventDefault();
+  const chat = document.getElementById('chatArea');
+  if (chat) chat.classList.add('dropping');
+});
+document.addEventListener('dragleave', (e) => {
+  if (e.relatedTarget) return; // still inside the window
+  const chat = document.getElementById('chatArea');
+  if (chat) chat.classList.remove('dropping');
+});
+document.addEventListener('drop', (e) => {
+  if (!UPLOADS_ENABLED || !e.dataTransfer || !e.dataTransfer.files.length) return;
+  e.preventDefault();
+  const chat = document.getElementById('chatArea');
+  if (chat) chat.classList.remove('dropping');
+  addFiles(e.dataTransfer.files);
+});
+
 const PREVIEW_FLAG = 'bda_preview_from_staff';
 
 function readPreviewFlag() {
@@ -1314,6 +1493,11 @@ function render() {
         <div class="msg ${m.role}">
           <div class="avatar">${m.role === 'user' ? 'You' : 'AI'}</div>
           <div class="bubble"${m.streaming ? ' id="streamingBubble"' : ''}>
+            ${m.files && m.files.length ? `
+              <div class="sent-files">
+                ${m.files.map(f => `<span class="f">${f.kind === 'document' ? '\u{1F4C4}' : '\u{1F5BC}\uFE0F'} ${escapeHtml(f.name)}</span>`).join('')}
+              </div>
+            ` : ''}
             ${m.streaming && !m.content
               ? '<div class="typing"><span></span><span></span><span></span></div>'
               : formatBubble(m.content)}
@@ -1342,8 +1526,24 @@ function render() {
       ` : ''}
     </div>
     ${lastError ? `<div class="error-banner">${escapeHtml(lastError)}</div>` : ''}
+    ${UPLOADS_ENABLED && pendingAttachments.length ? `
+      <div class="attach-tray">
+        ${pendingAttachments.map((a, i) => `
+          <span class="attach-chip">
+            <span class="kind">${a.kind === 'document' ? '\u{1F4C4}' : '\u{1F5BC}\uFE0F'}</span>
+            <span class="nm" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</span>
+            <span class="sz">${formatBytes(a.size)}</span>
+            <button class="rm" title="Remove" onclick="removeAttachment(${i})">\u00D7</button>
+          </span>
+        `).join('')}
+      </div>
+    ` : ''}
     <div class="input-bar">
-      <textarea id="questionInput" rows="1" placeholder="Ask a question, or type a parcel number to look it up..." onkeydown="handleKeydown(event)"></textarea>
+      ${UPLOADS_ENABLED ? `
+        <input type="file" id="fileInput" multiple accept=".pdf,image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleFilePick(event)">
+        <button class="attach-btn" title="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}>\u{1F4CE}</button>
+      ` : ''}
+      <textarea id="questionInput" rows="1" placeholder="${UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number...' : 'Ask a question, or type a parcel number to look it up...'}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
       <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking\u2026' : 'Ask'}</button>
     </div>
     <div class="disclaimer">Answers are drawn from Liberty County Building Department documents for general guidance only. For an official determination on any permit, fee, or code question, contact the Building Department directly.</div>
@@ -1391,18 +1591,29 @@ function askSuggestion(btn) {
 async function sendQuestion() {
   const input = document.getElementById('questionInput');
   const question = input.value.trim();
-  if (!question || isLoading) return;
+  // A file on its own is a valid request — "have a look at this".
+  if ((!question && !pendingAttachments.length) || isLoading) return;
+
+  // Hand the files to this send and clear the tray, so they can't be sent
+  // twice if the next question follows quickly.
+  const outgoing = pendingAttachments;
+  pendingAttachments = [];
 
   lastError = null;
-  messages.push({ role: 'user', content: question });
+  messages.push({
+    role: 'user',
+    content: question || 'Please look at the attached file and tell me what it shows.',
+    // Only names are kept on the message — never the file data.
+    files: outgoing.map(a => ({ name: a.name, kind: a.kind }))
+  });
   isLoading = true;
   scrollToBottomNext = true;   // always show the question they just asked
   render();
 
-  if (looksLikeParcelId(question)) {
+  if (!outgoing.length && looksLikeParcelId(question)) {
     await runParcelLookup(question);
   } else {
-    await runKnowledgeBaseQuestion(question);
+    await runKnowledgeBaseQuestion(question, outgoing);
   }
 
   isLoading = false;
@@ -1432,15 +1643,16 @@ async function runParcelLookup(parcelId) {
   }
 }
 
-async function runKnowledgeBaseQuestion(question) {
+async function runKnowledgeBaseQuestion(question, outgoing) {
   try {
+    const files = outgoing || [];
     const isGuide = isGuideQuestion(question);
 
     // A short follow-up ("what about commercial?", "how much is that?")
     // carries almost no retrievable keywords on its own, so fold in the
     // previous question when searching the knowledge base.
     const priorAsks = messages.filter(m => m.role === 'user').slice(0, -1);
-    const retrievalBase = (tokenize(question).length < 5 && priorAsks.length)
+    const retrievalBase = (tokenize(question).length < 5 && priorAsks.length && !files.length)
       ? priorAsks[priorAsks.length - 1].content + ' ' + question
       : question;
 
@@ -1468,6 +1680,7 @@ async function runKnowledgeBaseQuestion(question) {
         history: priorTurns,
         intent: isGuide ? 'guide' : 'single',
         stream: STREAMING_ENABLED,
+        attachments: files.map(a => ({ name: a.name, media_type: a.mediaType, data: a.data })),
         mode: IS_STAFF ? 'staff' : 'public'
       })
     });
@@ -1622,6 +1835,17 @@ async function init() {
   } else {
     IS_STAFF = false; // public URL — never staff, regardless of login state
   }
+
+  // Staff can always attach files; the public page only if the server allows it.
+  if (IS_STAFF) {
+    UPLOADS_ENABLED = true;
+  } else {
+    try {
+      const c = await fetch('/api/config');
+      if (c.ok) UPLOADS_ENABLED = !!(await c.json()).publicUploads;
+    } catch (e) { /* leave uploads off if the check fails */ }
+  }
+
   render();
 }
 
