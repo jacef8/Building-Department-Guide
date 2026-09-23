@@ -614,7 +614,11 @@ const DOC_LINKS = {
   'Land Development Code': '/docs/land-development-code.pdf',
   'Permit Eligibility Guide': '/docs/permit-eligibility-guide-2026.pdf',
   'Permit Coverage Reference': '/docs/permit-coverage-reference.pdf',
-  'Exemption Form': '/docs/written-request-for-exemption-hb803.pdf'
+  'Exemption Form': '/docs/written-request-for-exemption-hb803.pdf',
+  'Permit Exemption Quick Reference': '/docs/permit-exemption-quick-reference.pdf',
+  'Planning & Zoning Flow Chart': '/docs/planning-zoning-flow-chart.pdf',
+  'Fee Resolution 2026': '/docs/building-fee-resolution-2026.pdf',
+  'DBPR License Abbreviations': '/docs/dbpr-license-abbreviations.pdf'
 };
 
 const KNOWLEDGE_BASE = [
@@ -776,6 +780,12 @@ const KNOWLEDGE_BASE = [
     "Site Plan Approval — Tier 1 ($100, single-family homes/mobile home setups/simple additions) and Tier 2 ($350, industrial/commercial/multifamily): the owner or an authorized agent may apply; Tier 2 plans may require a Florida-licensed Professional Engineer (PE) or Registered Architect (RA) seal. Comprehensive Plan Amendments — Small-Scale under 10 acres ($1,500) and Large-Scale over 10 acres ($5,000): any owner or authorized representative may submit. Subdivision Plat Approval ($1,000): the plat MUST be prepared and sealed by a Florida Professional Surveyor and Mapper (PSM); the owner or agent submits the application. Property Split Review ($150), Special Exception ($1,000), Variance ($350), and Other Conditional Uses ($2,000): the owner or an authorized agent may apply — no contractor license is needed to apply." },
   { source: "Permit Eligibility Guide", section: "Signs, Pools, Towers & Permit-Wide Rules", page: 4, text:
     "Sign Permit ($100): the owner may install non-electrical signs on their own property; illuminated or electrical signs require a licensed electrical contractor for the wiring. Swimming Pool ($100, all sizes): a licensed Swimming Pool/Spa Contractor (CPC) is required — FS 489.103(6) excludes in-ground pools and spas from the owner-builder exemption. Communication Tower ($3,500 plus a $3,000 escrow deposit): a licensed General Contractor plus PE-sealed structural plans are required. Co-Location on an existing tower ($2,000): a licensed contractor performs the work. Permit-wide rules: an approved third-party inspection earns a 40% fee discount; there is no renewal fee; and starting work before the permit is issued incurs DOUBLE the permit fee." },
+
+  // ── Splitting land: asked constantly at the counter, and the rule sits
+  // inside a definition in the code rather than under a heading anyone
+  // would search for.
+  { source: "Land Development Code", section: "Splitting land — when a division needs plat approval (Section 5.2)", page: 109, text:
+    "Dividing a parcel into THREE (3) OR MORE lots is a subdivision under the Land Development Code, Section 5.2, and needs Subdivision Plat Approval ($1,000.00 or $25.00 per lot, whichever is greater); the plat must be prepared and sealed by a Florida Professional Surveyor and Mapper. Splitting into two lots is not a subdivision — that is a Property Split Review ($150.00). Two exclusions: a division into no more than 15 parcels of ten (10) acres or more each, exclusive of street right-of-way, is exempt and does not need a plat, and any division that establishes a new street or road is a subdivision regardless of how few lots it creates. Every resulting lot must still meet the minimum lot size, width, and density limits for its future land use category." },
 ];
 
 // ══════════════════════════════════════════════════════════════════════
@@ -903,7 +913,26 @@ function retrieveChunks(query, topN = 5) {
   });
 
   scored.sort((a, b) => b.score - a.score);
-  const picked = scored.filter(s => s.score > 0).slice(0, topN).map(s => s.chunk);
+  const ranked = scored.filter(s => s.score > 0);
+
+  // Spread the picks. The same rule is often restated in the guide, the
+  // eligibility guide and the fee schedule, and without a cap those near
+  // duplicates fill every slot and push out the one document that actually
+  // answers the question (the Land Development Code, usually). Caps first,
+  // then backfill by score so short lists are never starved.
+  const perSource = Math.max(3, Math.ceil(topN * 0.7));
+  const picked = [], seenSection = new Set(), bySource = new Map();
+  for (const { chunk } of ranked) {
+    if (picked.length >= topN) break;
+    const key = chunk.source + '|' + chunk.section;
+    const used = bySource.get(chunk.source) || 0;
+    if (seenSection.has(key) || used >= perSource) continue;
+    picked.push(chunk); seenSection.add(key); bySource.set(chunk.source, used + 1);
+  }
+  for (const { chunk } of ranked) {
+    if (picked.length >= topN) break;
+    if (!picked.includes(chunk)) picked.push(chunk);
+  }
   return picked;
 }
 
