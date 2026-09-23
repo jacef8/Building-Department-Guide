@@ -784,25 +784,127 @@ const KNOWLEDGE_BASE = [
 // ══════════════════════════════════════════════════════════════════════
 const STOPWORDS = new Set(['a','an','the','is','are','was','were','be','been','being','to','of','and','or','in','on','at','for','with','by','from','as','that','this','it','do','does','did','can','could','should','would','will','shall','what','when','where','who','how','why','if','my','me','i','we','our','you','your','their','they']);
 
+// ══════════════════════════════════════════════════════════════════════
+// Reference index — the full text of the Land Development Code and the
+// Comprehensive Plan, split into passages that keep their section heading
+// and page number (public/docs/reference-index.json, built by
+// scripts/build-index.js). The entries in KNOWLEDGE_BASE above are curated
+// summaries and settled department decisions; this is the source text
+// itself, so questions the summaries never anticipated ("can I split a
+// parcel into 3?") can still be answered and cited.
+// ══════════════════════════════════════════════════════════════════════
+let REFERENCE_INDEX = [];
+let referenceLoad = null;
+function loadReferenceIndex() {
+  if (!referenceLoad) {
+    referenceLoad = fetch('/docs/reference-index.json')
+      .then(r => (r.ok ? r.json() : []))
+      .then(list => { REFERENCE_INDEX = Array.isArray(list) ? list : []; return REFERENCE_INDEX; })
+      .catch(() => { REFERENCE_INDEX = []; return REFERENCE_INDEX; });
+  }
+  return referenceLoad;
+}
+
+function stem(w) {
+  if (w.length < 4) return w;
+  return w.replace(/ies$/, 'y').replace(/(sses|shes|ches|xes)$/, m => m.slice(0, -2)).replace(/([^s])s$/, '$1');
+}
+
 function tokenize(str) {
-  return str.toLowerCase().replace(/[^a-z0-9$.\s]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !STOPWORDS.has(w));
+  return str.toLowerCase().replace(/[^a-z0-9$.\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 1 && !STOPWORDS.has(w)).map(stem);
+}
+
+// The words people use at the counter are not the words the code uses.
+// Each group is mutually interchangeable at search time.
+const SYNONYMS = [
+  ['split', 'divide', 'division', 'subdivide', 'subdivision', 'partition', 'separate'],
+  ['parcel', 'lot', 'tract', 'property', 'acreage'],
+  ['setback', 'distance', 'buffer', 'yard'],
+  ['size', 'area', 'acreage', 'square', 'dimension', 'minimum'],
+  ['house', 'home', 'dwelling', 'residence', 'residential'],
+  ['barn', 'shed', 'outbuilding', 'garage'],   // not 'accessory': it is a section title, and boosting it buries Rule 1
+  ['business', 'commercial', 'store', 'retail', 'shop'],
+  ['road', 'street', 'driveway', 'easement', 'right-of-way'],
+  ['sign', 'billboard'],
+  ['mobile', 'manufactured', 'trailer'],
+  ['fee', 'cost', 'charge', 'price'],
+  ['permit', 'permitting', 'application'],
+  ['zoning', 'zone', 'district', 'land-use', 'category'],
+  ['flood', 'floodplain', 'wetland'],
+  ['density', 'units', 'dwelling'],
+  ['rv', 'camper', 'recreational'],
+  ['tower', 'antenna', 'telecommunication', 'wireless'],
+  ['tall', 'height', 'stories', 'story', 'feet'],
+  ['exempt', 'exemption', 'exception', 'excluded'],
+].map(g => g.map(stem));
+
+function expandTokens(tokens) {
+  const out = new Set(tokens);
+  tokens.forEach(t => SYNONYMS.forEach(group => {
+    if (group.includes(t)) group.forEach(g => out.add(g));
+  }));
+  return out;
+}
+
+const _tokenCache = new WeakMap();
+function chunkTokens(chunk) {
+  let v = _tokenCache.get(chunk);
+  if (!v) {
+    const title = tokenize(chunk.section || '');
+    const bodyTokens = tokenize(chunk.text || '');
+    // punctuation-free copy for phrase matching: the code writes "ten (10) acres",
+    // so a search for "10 acres" only lands if the brackets are flattened first
+    const hay = (chunk.section + ' ' + chunk.text).toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ');
+    v = { title: new Set(title), body: new Set(bodyTokens), all: new Set([...title, ...bodyTokens]), hay };
+    _tokenCache.set(chunk, v);
+  }
+  return v;
 }
 
 function retrieveChunks(query, topN = 5) {
-  const qTokens = tokenize(query);
-  const scored = KNOWLEDGE_BASE.map(chunk => {
-    const chunkTokens = tokenize(chunk.section + ' ' + chunk.text);
+  const pool = KNOWLEDGE_BASE.concat(REFERENCE_INDEX);
+  const qRaw = tokenize(query);
+  if (!qRaw.length) return [];
+  const qSet = expandTokens(qRaw);
+  const qDirect = new Set(qRaw);
+
+  // inverse document frequency: a word in half the corpus says little
+  const df = new Map();
+  pool.forEach(c => chunkTokens(c).all.forEach(t => { if (qSet.has(t)) df.set(t, (df.get(t) || 0) + 1); }));
+  const N = pool.length;
+  const idf = t => Math.log(1 + N / (1 + (df.get(t) || 0)));
+
+  // Exact wording is the strongest signal there is: "pole barn house" means
+  // something different from "pole barn", and no amount of word-level scoring
+  // separates them. Phrases are matched against the raw text, not the stems.
+  const phrase = query.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  // keep numbers: "10 acres" and "3 lots" are exactly the phrases that matter
+  const words = phrase.split(' ').filter(w => (w.length > 2 || /^\d+$/.test(w)) && !STOPWORDS.has(w));
+  const bigrams = [], trigrams = [];
+  for (let i = 0; i < words.length - 1; i++) bigrams.push(words[i] + ' ' + words[i + 1]);
+  for (let i = 0; i < words.length - 2; i++) trigrams.push(words[i] + ' ' + words[i + 1] + ' ' + words[i + 2]);
+
+  const scored = pool.map(chunk => {
+    const tk = chunkTokens(chunk);
     let score = 0;
-    qTokens.forEach(qt => {
-      chunkTokens.forEach(ct => {
-        if (ct === qt) score += 2;
-        else if (ct.includes(qt) || qt.includes(ct)) score += 0.5;
-      });
+    qSet.forEach(qt => {
+      const direct = qDirect.has(qt);
+      const weight = idf(qt) * (direct ? 1 : 0.3);   // synonyms count, but less
+      if (tk.title.has(qt)) score += 2.2 * weight;
+      else if (tk.body.has(qt)) score += 1 * weight;
     });
+    const hay = tk.hay;
+    bigrams.forEach(b => { if (hay.includes(b)) score += 3; });
+    trigrams.forEach(g => { if (hay.includes(g)) score += 6; });
+    // curated entries are settled decisions; prefer them on a tie
+    if (!chunk.id) score *= 1.12;
     return { chunk, score };
   });
+
   scored.sort((a, b) => b.score - a.score);
-  return scored.filter(s => s.score > 0).slice(0, topN).map(s => s.chunk);
+  const picked = scored.filter(s => s.score > 0).slice(0, topN).map(s => s.chunk);
+  return picked;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1558,7 +1660,7 @@ function render() {
             ${m.sources && m.sources.length && !m.streaming ? `
               <div class="sources-used">
                 ${m.sources.map(s => {
-                  const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}`;
+                  const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}${s.page && s.id ? `, p. ${s.page}` : ''}`;
                   const url = DOC_LINKS[s.source];
                   if (url && s.page) {
                     return `<a class="citation-tag" href="${url}#page=${s.page}" target="_blank" rel="noopener">${label}</a>`;
@@ -1712,9 +1814,10 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
 
     // Whole-project questions touch many sections at once, so they get a
     // wider net; single lookups stay tight to avoid diluting the context.
-    const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 7);
+    await loadReferenceIndex();   // full LDC / Comp Plan text, fetched once
+    const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9);
     const contextText = relevantChunks.length
-      ? relevantChunks.map(c => `[${c.source} \u2014 ${c.section}]\n${c.text}`).join('\n\n---\n\n')
+      ? relevantChunks.map(c => `[${c.source} \u2014 ${c.section}${c.page ? `, page ${c.page}` : ''}]\n${c.text}`).join('\n\n---\n\n')
       : '';
 
     // Prior turns so follow-up questions make sense. Only the plain text is
@@ -1876,6 +1979,7 @@ async function staffLogout() {
 // browser is holding.
 async function init() {
   loadHistory();
+  loadReferenceIndex();   // warm the LDC / Comp Plan index in the background
   if (ON_STAFF_ROUTE) {
     try {
       const r = await fetch('/api/session');
