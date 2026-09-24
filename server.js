@@ -40,30 +40,44 @@ app.use(express.static(path.join(__dirname, 'public')));
 const RL_WINDOW_MS = 60 * 1000;
 const RL_MAX_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 12);
 const DAILY_ASK_CAP = Number(process.env.DAILY_ASK_CAP || 1500);
-const ipHits = new Map(); // ip -> array of recent request timestamps
+const ipHits = new Map();     // ip -> array of recent request timestamps (AI)
+const parcelHits = new Map(); // the same, for parcel lookups
 let askDay = '';
 let askCount = 0;
 
 // periodic cleanup so the IP map doesn't grow forever
 setInterval(() => {
   const cutoff = Date.now() - RL_WINDOW_MS;
-  for (const [ip, ts] of ipHits) {
-    const kept = ts.filter(t => t > cutoff);
-    if (kept.length) ipHits.set(ip, kept); else ipHits.delete(ip);
+  for (const store of [ipHits, parcelHits]) {
+    for (const [ip, ts] of store) {
+      const kept = ts.filter(t => t > cutoff);
+      if (kept.length) store.set(ip, kept); else store.delete(ip);
+    }
   }
 }, 5 * 60 * 1000).unref();
 
-function perIpLimiter(req, res, next) {
-  const ip = req.ip || 'unknown';
-  const now = Date.now();
-  const recent = (ipHits.get(ip) || []).filter(t => now - t < RL_WINDOW_MS);
-  if (recent.length >= RL_MAX_PER_MIN) {
-    return res.status(429).json({ error: 'Too many requests — please wait a moment and try again.' });
-  }
-  recent.push(now);
-  ipHits.set(ip, recent);
-  next();
+// The AI limit exists to protect the API bill. A parcel lookup reads a file
+// already in memory and costs nothing, so it gets its own, looser bucket —
+// otherwise pulling up three properties at the counter locks someone out of
+// asking questions about them.
+const PARCEL_MAX_PER_MIN = Number(process.env.PARCEL_LIMIT_PER_MIN || 60);
+
+function makeLimiter(store, maxPerMin) {
+  return function limiter(req, res, next) {
+    const ip = req.ip || 'unknown';
+    const now = Date.now();
+    const recent = (store.get(ip) || []).filter(t => now - t < RL_WINDOW_MS);
+    if (recent.length >= maxPerMin) {
+      return res.status(429).json({ error: 'Too many requests — please wait a moment and try again.' });
+    }
+    recent.push(now);
+    store.set(ip, recent);
+    next();
+  };
 }
+
+const perIpLimiter = makeLimiter(ipHits, RL_MAX_PER_MIN);
+const perIpParcelLimiter = makeLimiter(parcelHits, PARCEL_MAX_PER_MIN);
 
 function dailyAskCap(req, res, next) {
   if (req.isStaff) return next(); // trusted internal users bypass the public daily cap
@@ -149,6 +163,20 @@ FEES AND MONEY — applies to every answer:
 - Add a final bold **Estimated total** row. Add up ONLY the fixed dollar amounts you actually listed. If any line depends on size (for example a per-square-foot rate) or is not a fixed amount, do not fold a guess into the total — show that line's rate in its own row, and make the total row say it covers the fixed fees only and excludes the size-based ones.
 - Never invent, round, adjust, or estimate a fee that is not stated in the reference material. Every figure in the table must come from the reference material; the only arithmetic you may do is adding up figures that are stated there.
 - Close the table with a one-line note that fees are subject to change and that additional charges may apply depending on the project.`;
+
+// When a parcel has been pulled up, the reference material starts with its
+// facts from the tax roll. The roll is authoritative for ownership, land area
+// and existing improvements — and silent on everything else, which is the part
+// worth being strict about.
+const PARCEL_RULES = `
+
+THE PARCEL ON THE COUNTER — the reference material opens with an ACTIVE PARCEL block:
+- Those facts are from the county's assessment roll and are reliable for that property: who owns it, its land area, its legal description, and what is already built on it. Apply the rules to those facts instead of answering in the abstract — if the question is whether the property can be split, use its actual acreage; if it is about building, use whether the roll shows existing structures.
+- The roll does NOT contain zoning, the future land use category, the flood zone, or river/wetland buffers. Never state or infer any of those from it. Where the answer depends on one, say plainly that the future land use category (or flood zone) has to be confirmed on the county's map first, and give the rest of the answer.
+- The tax roll use code describes how the property is assessed, not what it is permitted or zoned for. Do not present it as zoning.
+- If the block says the acreage fields disagree, say the acreage needs confirming with the Property Appraiser rather than relying on the number.
+- Do not repeat the whole parcel block back. Refer to the property by its parcel number and use only the facts that bear on the question.
+- The roll is a snapshot as of January 1 of its assessment year, so a recent sale, split or new building may not appear yet.`;
 
 // Whole-project questions ("what are the steps and permits for building X, and
 // what does it cost?") get a structured walkthrough instead of a paragraph.
@@ -330,6 +358,7 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
   const isGuide = intent === 'guide';
   const guardrails = (req.isStaff ? STAFF_GUARDRAILS : PUBLIC_GUARDRAILS)
     + FEE_RULES
+    + (refMaterial.startsWith('ACTIVE PARCEL') ? PARCEL_RULES : '')
     + (attached.blocks.length ? ATTACHMENT_RULES : '')
     + (isGuide ? GUIDE_FORMAT : '');
   const systemPrompt = `${guardrails}\n\nREFERENCE MATERIAL:\n${refMaterial}`;
@@ -429,54 +458,81 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
   }
 });
 
-// ── Parcel lookup: Florida DOR statewide parcel/cadastral feature service ──
-// Public ArcGIS REST API (no key required), maintained by the Florida
-// Dept of Revenue from each county property appraiser's annual tax roll
-// submission. CO_NO=49 is Liberty County's DOR county number.
-// This is a snapshot (updated a few times a year), not a live county feed —
-// for anything legally significant, staff should still confirm against the
-// county Property Appraiser's own site (linked in the UI).
-const PARCEL_API_BASE = 'https://services9.arcgis.com/Gh9awoU677aKree0/arcgis/rest/services/Florida_Statewide_Cadastral/FeatureServer/0/query';
-const LIBERTY_CO_NO = 49;
+// ── Parcel lookup: Liberty County's slice of the Florida DOR tax roll ──
+// Every Liberty County parcel, loaded into memory at boot from
+// data/parcels.json (built by scripts/build-parcels.js from the Department of
+// Revenue's NAL file). A parcel number, an owner name, or a road name all
+// resolve here in a millisecond.
+//
+// This replaced a proxy to the statewide cadastral feature service, which
+// holds 10.8 million parcels and is not indexed by county: every Liberty
+// County query against it either timed out or was refused, so the lookup
+// never worked in the field.
+//
+// The roll is a snapshot as of January 1 of its assessment year. It carries
+// ownership, land area, and improvements — NOT zoning and NOT the future land
+// use map. For anything legally significant, staff confirm on the Property
+// Appraiser's own site, which the UI links.
+let PARCELS = [];
+let PARCEL_META = { county: 'Liberty', count: 0 };
+try {
+  const loaded = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'parcels.json'), 'utf8'));
+  PARCELS = loaded.parcels || [];
+  PARCEL_META = { county: loaded.county, countyNo: loaded.countyNo, assessmentYear: loaded.assessmentYear,
+                  source: loaded.source, built: loaded.built, count: PARCELS.length };
+  console.log(`Parcel index: ${PARCELS.length} parcels, ${PARCEL_META.county} County, ${PARCEL_META.assessmentYear} roll`);
+} catch (err) {
+  console.error('Parcel index not loaded — parcel lookup will report itself unavailable:', err.message);
+}
 
-app.post('/api/parcel', perIpLimiter, async (req, res) => {
+const normaliseParcel = (s) => (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const MAX_PARCEL_MATCHES = 8;
+
+app.post('/api/parcel', perIpParcelLimiter, (req, res) => {
   const { parcelId } = req.body || {};
   if (!parcelId || typeof parcelId !== 'string') {
     return res.status(400).json({ error: 'Missing "parcelId" in request body.' });
   }
-
-  const cleaned = parcelId.trim().replace(/'/g, "''"); // basic SQL-injection guard for this literal
-  if (!cleaned) {
-    return res.status(400).json({ error: 'Parcel ID was empty after trimming.' });
+  const raw = parcelId.trim();
+  if (!raw) return res.status(400).json({ error: 'Parcel ID was empty after trimming.' });
+  if (!PARCELS.length) {
+    return res.status(503).json({ error: 'The parcel index is not loaded on the server.' });
   }
 
-  const whereClause = `CO_NO=${LIBERTY_CO_NO} AND (PARCEL_ID='${cleaned}' OR PARCEL_ID LIKE '%${cleaned}%')`;
-  const outFields = [
-    'PARCEL_ID', 'DOR_UC', 'OWN_NAME', 'OWN_ADDR1', 'OWN_CITY', 'OWN_STATE',
-    'PHY_ADDR1', 'PHY_CITY', 'PHY_ZIPCD', 'S_LEGAL', 'LND_SQFOOT', 'TOT_LVG_AR',
-    'JV', 'LND_VAL', 'NO_RES_UNT', 'NO_BULDNG', 'TWN', 'RNG', 'SEC', 'ACT_YR_BLT'
-  ].join(',');
+  const key = normaliseParcel(raw);
+  const text = raw.toUpperCase();
+  let matches = [];
+  let matchedOn = 'parcel number';
 
-  const url = `${PARCEL_API_BASE}?where=${encodeURIComponent(whereClause)}` +
-    `&outFields=${outFields}&resultRecordCount=5&returnGeometry=false&f=json`;
-
-  try {
-    const apiResponse = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    if (!apiResponse.ok) {
-      console.error('Parcel API HTTP error:', apiResponse.status);
-      return res.status(502).json({ error: `Parcel data service returned status ${apiResponse.status}` });
+  if (key.length >= 4) {
+    matches = PARCELS.filter(p => p.key === key);                        // exact
+    if (!matches.length) matches = PARCELS.filter(p => p.key.startsWith(key));
+    if (!matches.length) matches = PARCELS.filter(p => p.key.includes(key));
+    // Parcel numbers get copied off other systems that pad the segments
+    // differently ("02-1S-4W-8-1" for 0201S4W00008001). Comparing with the
+    // padding zeros dropped catches those; it can match more than one parcel,
+    // and the caller lists them rather than guessing.
+    if (!matches.length) {
+      const loose = key.replace(/0+/g, '');
+      if (loose.length >= 4) matches = PARCELS.filter(p => p.key.replace(/0+/g, '') === loose);
     }
-    const data = await apiResponse.json();
-    if (data.error) {
-      console.error('Parcel API returned an error object:', data.error);
-      return res.status(502).json({ error: data.error.message || 'Parcel data service returned an error.' });
-    }
-    const features = (data.features || []).map(f => f.attributes);
-    res.json({ features });
-  } catch (err) {
-    console.error('Parcel lookup proxy error:', err);
-    res.status(500).json({ error: 'Failed to reach the Florida parcel data service from the server.' });
   }
+  // A name or a road name is a perfectly reasonable thing to type at a counter.
+  if (!matches.length && /[A-Z]{3,}/.test(text)) {
+    matches = PARCELS.filter(p => (p.own || '').toUpperCase().includes(text));
+    matchedOn = 'owner name';
+    if (!matches.length) {
+      matches = PARCELS.filter(p => (p.adr || '').toUpperCase().includes(text));
+      matchedOn = 'site address';
+    }
+  }
+
+  res.json({
+    meta: PARCEL_META,
+    matchedOn,
+    total: matches.length,
+    parcels: matches.slice(0, MAX_PARCEL_MATCHES),
+  });
 });
 
 // Health check — handy for Railway

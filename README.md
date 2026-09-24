@@ -26,8 +26,16 @@ lingering login cookie can never turn the public site into the staff view.
   relayed straight to the API and never written to disk; only the file name is
   kept in the conversation history, so a plan set never sits in localStorage on
   a shared counter machine.
-- Look up a parcel: type a parcel number and it pulls the designation,
-  owner, legal description, and acreage from Florida DOR statewide data.
+- **Look up a parcel** — type a parcel number (dashes optional), an owner's
+  last name, or a road name. It pulls the property from Liberty County's own
+  tax roll: owner, site address, acreage, legal description, what is already
+  built on it, homestead, and the last recorded sale — then says what that
+  means for permitting (split thresholds, new construction vs. renovation,
+  owner-builder eligibility). The parcel stays "on the counter" and every
+  following question is answered for it until it is cleared. The roll carries
+  no zoning, future land use, flood zone or buffer data, and the assistant is
+  instructed never to infer them. Refresh the data once a year — see the header
+  of `scripts/build-parcels.js`.
 
 ## How it's structured
 

@@ -203,6 +203,51 @@
   }
   .parcel-link:hover { background: var(--navy-dark); }
 
+  /* The parcel the conversation is about, held in view under the header so
+     it's never a guess which property an answer is talking about. */
+  .parcel-bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 24px;
+    background: var(--navy);
+    color: #fff;
+    border-bottom: 3px solid var(--gold);
+  }
+  .parcel-bar .pb-main {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .parcel-bar .pb-tag {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .parcel-bar .pb-id { font-size: 15px; font-weight: 800; letter-spacing: 0.02em; }
+  .parcel-bar .pb-detail { font-size: 13px; color: var(--gold-light); }
+  .parcel-bar .pb-clear {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 6px 14px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .parcel-bar .pb-clear:hover { background: rgba(255, 255, 255, 0.26); }
+  @media (max-width: 640px) {
+    .parcel-bar { padding: 9px 16px; }
+    .parcel-bar .pb-detail { font-size: 12px; }
+  }
+
   /* ── Chat area ────────────────────────────────────────── */
   .chat {
     flex: 1;
@@ -703,7 +748,7 @@ const KNOWLEDGE_BASE = [
   { source: "Building Guide", section: "VII. Zoning Tips — Alcohol & River Buffers", page: 9, text:
     "Any alcohol establishment (e.g., a package store) in a commercial zone requires a Conditional Use/Special Exception ($1,000.00) before the Board of Adjustment; if the property line is within 1,000 feet of a school, church, public playground, or residential district, it faces automatic statutory denial. Structures near the Apalachicola River, Ochlockonee River, Telogia Creek, or New River must clear a mandatory 75-foot native vegetation buffer from the ordinary high-water line, regardless of the structure's size — even a shed under the 120 sq ft exemption must still clear this buffer, verified via a $100.00 Tier 1 Site Plan Review." },
   { source: "Building Guide", section: "VIII. Miscellaneous — Fees & 2026 Update", page: 10, text:
-    "Decks and Ramps: $100.00. Sign Permit: $100.00. Swimming Pool (all sizes): $100.00 — Florida Statute 489.103(6) excludes in-ground swimming pools from the owner-builder exemption; a Licensed Commercial Pool/Spa Contractor (CPC) is legally required. Communication Tower (Conditional Land Use): $3,500.00 non-refundable application fee plus a $3,000.00 refundable consultant escrow deposit. Co-Location on Existing Tower: $2,000.00 non-refundable. Under CS/CS/HB 803 (2026), a retaining wall spanning more than one lot or parcel now requires a single building permit covering the project as a whole, not a separate permit per parcel." },
+    "Decks and Ramps (uncovered deck, patio, steps or ramp): $100.00. Porch, Covered Patio or Attached Carport — roofed with open sides, attached to a dwelling: $125.00 flat, any size. Screening an existing covered porch: $50.00. Sign Permit: $100.00. Swimming Pool (all sizes): $100.00 — Florida Statute 489.103(6) excludes in-ground swimming pools from the owner-builder exemption; a Licensed Commercial Pool/Spa Contractor (CPC) is legally required. Communication Tower (Conditional Land Use): $3,500.00 non-refundable application fee plus a $3,000.00 refundable consultant escrow deposit. Co-Location on Existing Tower: $2,000.00 non-refundable. Under CS/CS/HB 803 (2026), a retaining wall spanning more than one lot or parcel now requires a single building permit covering the project as a whole, not a separate permit per parcel." },
   { source: "Building Guide", section: "IX. Additional Permit Rules", page: 11, text:
     "Third-Party Inspection Discount: 40% off permit fee (current department rate). Plan review is included in the permit fee — no separate plan review charge is collected. There is NO renewal fee; an expiring permit may be extended on written request at no charge. Penalty for work started before permit issued: double the permit fee. Under CS/CS/HB 803 (2026), commercial permit fee reductions for private-provider use are now a statutory minimum — at least 25% off when a private provider does either plan review or inspection, at least 50% off when they do both; failing to apply the minimum forfeits the county's ability to collect any fee on that project. It's still pending review with Kenneth Hosford whether the department's flat 40% rate satisfies this for commercial private-provider projects. Separately, HB 803 restricts inspection fees from being based on project valuation — they must instead reflect actual cost of providing inspection services. Whether the county's $0.75/sq ft (Residential) and $0.85/sq ft (Commercial) building permit fees are affected is a pending fee-methodology question for Kenneth Hosford and finance, not something to resolve at the counter." },
   { source: "Building Guide", section: "X. Glossary — HOA & Statewide Form Note", page: 12, text:
@@ -792,6 +837,8 @@ const KNOWLEDGE_BASE = [
   // Board decision.
   { source: "Office Procedure", section: "Difference between the comp plan and the LDC — which one governs", text:
     "The difference between the Comprehensive Plan (the comp plan) and the Land Development Code (the LDC): the comp plan says what the county intends to happen, and the LDC is the rulebook that makes it happen. The Comprehensive Plan is the county's long-range policy document required by Chapter 163, Florida Statutes. It is written as goals, objectives and policies, carries the Future Land Use Map that gives every parcel a category (Agriculture, Rural Residential, Town Center, and so on), and sets the big limits such as density caps — 1 dwelling unit per 10 acres in Agriculture, up to 4 units per acre in Rural Village. The Land Development Code is the enforceable ordinance that carries the Plan out: setbacks, minimum lot sizes and widths, road right-of-way widths, sign sizes, tower rules, and the permit and review procedures. The Plan's Objective 1 requires growth to be managed through the Land Development Regulations that implement the Future Land Use Map, and Policy 1-1 lists what those regulations must cover. Where the two disagree the PLAN CONTROLS: Land Development Code Section 1.4 says its provisions are read unless doing so would be inconsistent with the Comprehensive Plan. Changing the Plan is a Comprehensive Plan Amendment ($1,500.00 small-scale under 10 acres, $5,000.00 large-scale); changing the Code is an Amendment to Land Development Regulations ($1,500.00); both are Board decisions, not staff decisions. Rule of thumb at the counter: if the answer is a number in a table (setback, lot width, fee), it is a Code question; if the answer depends on what the land is designated for, it is a Plan question, and a use the designation does not allow needs a Plan amendment or rezoning rather than a permit." },
+  { source: "Office Procedure", section: "Porches, covered patios, carports and decks — which fee applies", text:
+    "How to charge a porch, covered patio, screen porch, carport or deck. A roofed porch, covered patio or attached carport — roofed, open sides, attached to a dwelling — is $125.00 flat, whatever its size. An uncovered deck, patio, steps or ramp is the Decks and Ramps fee, $100.00. Screening in an existing covered porch is $50.00 (screen only, no structural change). Enclosing a porch as heated living space is charged at the residential per-square-foot rate, $0.75 per sq ft, because it becomes living area — that is a room addition, not a porch. The porch fee is flat rather than per square foot because a porch is not living area: Land Development Code page 31 excludes porches from the minimum floor area a dwelling must have. Why a porch is not charged at the accessory building rate: the Code defines a porch as a roofed-over space attached to the outside of an exterior wall with no enclosure other than the exterior walls, and an attached structure that depends on the dwelling for structural support is part of the principal building, so it is permitted as part of the house. An owner-builder may build a porch on owner-occupied property. Any electrical — lights, fans, outlets — needs a separate Electrical permit. Setback trap to check at intake: the Code excludes only UNCOVERED porches, decks, steps and balconies from yard measurement, so a covered porch counts toward the required front, side and rear setbacks. Roofing over an existing uncovered deck therefore needs a setback check before the permit is issued, even though the deck itself did not." },
 ];
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1020,17 +1067,61 @@ function expandQuery(question, isGuide) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// Parcel lookup — Florida DOR statewide parcel data (via server proxy)
+// Parcel lookup — Liberty County's tax roll, served by /api/parcel
 // A message is treated as a parcel lookup if it's mostly digits/dashes/
 // dots and doesn't look like a normal question (no letters other than
 // what a parcel number legitimately contains). This is a deterministic
 // heuristic, not an AI guess, so it's predictable to test and debug.
 // ══════════════════════════════════════════════════════════════════════
+// A Liberty County parcel number carries the township and range inside it —
+// 0195S3W00001000 is section 19, township 5S, range 3W. So it is NOT all
+// digits, and the old digits-only test rejected every real parcel number
+// staff type. A candidate is a run of digits and letters, at least 8
+// characters, mostly digits, whose only letters are the direction letters
+// N/S/E/W. Written with or without dashes, either works.
+const PARCEL_TOKEN = /\b(?=[0-9\-.]*[0-9][0-9\-.]*[NSEW])[0-9][0-9NSEW\-.]{6,24}[0-9]\b/i;
+
+function normaliseParcelKey(s) {
+  return (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 function looksLikeParcelId(input) {
-  const trimmed = input.trim();
+  const trimmed = (input || '').trim();
   if (trimmed.length < 5) return false;
-  // Parcel IDs: digits, dashes, dots, occasional spaces — no other letters/words
-  return /^[0-9\-\.\s]+$/.test(trimmed) && /\d{4,}/.test(trimmed.replace(/[\-\.\s]/g, ''));
+  const key = normaliseParcelKey(trimmed);
+  if (key.length < 8 || key.length > 25) return false;
+  // Only digits and direction letters, and at least two-thirds digits.
+  if (!/^[0-9NSEW]+$/.test(key)) return false;
+  const digits = (key.match(/\d/g) || []).length;
+  return digits >= 6 && digits / key.length >= 0.66;
+}
+
+// A name or a road is what people actually have at the counter ("the Strickland
+// place", "out on Buckeye Lane"), so a short bare phrase is tried as a property
+// search before it is treated as a question. Anything that looks like a
+// permitting topic is left alone, and a search that finds nothing falls through
+// to the knowledge base, so this can only ever add an answer, never block one.
+const PERMIT_TOPIC_WORDS = /\b(porch|deck|ramp|fee|fees|permit|permits|shed|barn|roof|roofing|pool|sign|septic|tower|fence|carport|patio|garage|mobile home|setback|setbacks|variance|inspection|inspections|plat|split|zoning|flood|electrical|plumbing|hvac|solar|demolition|renovation|addition|exemption|affidavit|form|forms|application|code|ldc|comp plan|homestead)\b/i;
+
+function looksLikePropertySearch(input) {
+  const t = (input || '').trim();
+  if (t.length < 4 || t.length > 28) return false;
+  if (/[?]/.test(t)) return false;
+  const words = t.split(/\s+/);
+  if (words.length > 3) return false;
+  if (/^(what|when|where|who|how|why|can|do|does|is|are|should|must|need|tell|show|list)\b/i.test(t)) return false;
+  if (PERMIT_TOPIC_WORDS.test(t)) return false;
+  return /^[A-Za-z][A-Za-z .,'&-]*$/.test(t);
+}
+
+// "can 01-9S-3W-0000-1000 be split into three lots?" is a question about a
+// parcel, not a bare lookup — pull the number out so the answer can use it.
+function extractParcelId(input) {
+  const trimmed = (input || '').trim();
+  if (looksLikeParcelId(trimmed)) return trimmed;
+  const m = trimmed.match(PARCEL_TOKEN);
+  if (m && looksLikeParcelId(m[0])) return m[0];
+  return null;
 }
 
 // Florida DOR standard 2-digit Use Code categories (statewide schedule,
@@ -1075,43 +1166,125 @@ const DOR_USE_CODES = {
   '97': 'Outdoor Recreational/Park Land (private)', '98': 'Centrally Assessed', '99': 'Acreage Not Otherwise Classified'
 };
 
-function formatParcelResult(features, searchedFor) {
-  if (!features || features.length === 0) {
-    return `No parcel matching "${searchedFor}" was found in the Florida DOR statewide parcel data for Liberty County. Double-check the parcel number, or use the "Look up a parcel" link to search directly on the county's own Property Appraiser site (qPublic) — that's the live, authoritative source.`;
+// The roll stores the use code as three characters ("001", "087"); the
+// standard schedule above is keyed on the last two.
+function parcelUseLabel(p) {
+  const code = (p.uc || '').toString().padStart(2, '0').slice(-2);
+  return { code, label: DOR_USE_CODES[code] || 'Not in the standard DOR schedule' };
+}
+
+const money = (n) => '$' + Number(n || 0).toLocaleString('en-US');
+const acresText = (p) => p.acres ? `${p.acres.toLocaleString('en-US')} acre${p.acres === 1 ? '' : 's'}` : 'not on the roll';
+
+// What the roll says about the property, in the order someone at the counter
+// would want it: where it is, who owns it, how big, what is already on it.
+function describeParcel(p) {
+  const use = parcelUseLabel(p);
+  const site = [p.adr, p.cty, p.zip].filter(Boolean).join(', ');
+  const mailing = [p.oad, [p.oci, p.ost].filter(Boolean).join(', '), p.ozp].filter(Boolean).join(' ');
+  const rows = [
+    ['Parcel', p.id],
+    ['Site address', site || 'none on the roll (vacant land often has none)'],
+    ['Owner of record', p.own || 'not on the roll'],
+    ['Owner mailing', mailing || 'not on the roll'],
+    ['Use on the tax roll', `${use.label} (DOR code ${use.code})`],
+    ['Land area', acresText(p) + (p.chk ? ' — the roll\'s two acreage fields disagree, confirm with the Property Appraiser' : '')],
+    ['Legal description', p.leg || 'not on the roll'],
+    ['Section / Township / Range', [p.sec, p.twn, p.rng].filter(Boolean).join(' - ') || 'not on the roll'],
+  ];
+  if (p.bld) {
+    rows.push(['Buildings on the roll', `${p.bld}${p.res ? `, ${p.res} residential unit${p.res === 1 ? '' : 's'}` : ''}`]);
+    if (p.liv) rows.push(['Heated living area', `${p.liv.toLocaleString('en-US')} sq ft`]);
+    if (p.yr) rows.push(['Year built', String(p.yr)]);
+  } else {
+    rows.push(['Buildings on the roll', 'none — the roll shows this as unimproved']);
+  }
+  rows.push(['Just value', p.jv ? money(p.jv) + (p.lv ? ` (land ${money(p.lv)})` : '') : 'not on the roll']);
+  rows.push(['Homestead exemption', p.hs ? 'yes — the owner claims this as their residence' : 'no homestead on this parcel']);
+  if (p.syr) rows.push(['Last recorded sale', `${p.smo ? p.smo + '/' : ''}${p.syr}${p.spr ? ' for ' + money(p.spr) : ''}${p.bk ? `, OR book ${p.bk} page ${p.pg}` : ''}`]);
+  return rows.map(([k, v]) => `${k}: ${v}`).join('\n');
+}
+
+// Deterministic notes — these come from the settled rules, not from the model,
+// so they say the same thing every time. Anything the roll cannot answer is
+// named as such rather than guessed.
+function parcelPermitNotes(p) {
+  const use = parcelUseLabel(p);
+  const notes = [];
+  const acres = p.acres || 0;
+
+  if (acres >= 1) {
+    const tenAcreLots = Math.floor(acres / 10);
+    if (acres >= 20) {
+      notes.push(`Splitting it: at ${acresText(p)}, a division into two lots is a Property Split Review ($150.00). Three or more lots is a subdivision under LDC Section 5.2 and needs plat approval ($1,000.00 or $25.00 per lot, whichever is greater) — unless every resulting parcel is ten acres or more and there are no more than 15 of them, which is exempt from platting. This parcel could yield about ${tenAcreLots} ten-acre parcel${tenAcreLots === 1 ? '' : 's'}${tenAcreLots > 15 ? ', which is past the 15-parcel exemption, so a plat would be required' : ', which is within that exemption'}. Any division that creates a new street is a subdivision no matter how few lots it makes.`);
+    } else {
+      notes.push(`Splitting it: at ${acresText(p)}, a division into two lots is a Property Split Review ($150.00); three or more lots is a subdivision needing plat approval. Every resulting lot still has to meet the minimum lot size, width and density for its future land use category, which at this size is the binding constraint.`);
+    }
   }
 
-  const lines = [];
-  if (features.length > 1) {
-    lines.push(`Found ${features.length} matching parcels — showing the closest matches:\n`);
+  if (!p.bld) {
+    notes.push('Building on it: the roll shows no structures, so new construction applies — Tier 1 Site Plan Review ($100.00), a confirmed 911 address before any inspection, residential building permit at $0.75 per square foot, and a recorded Notice of Commencement before the first inspection when the job value is over $2,500.');
+  } else if (use.code === '02') {
+    notes.push(`Mobile home: the roll shows a mobile home here. A replacement or new set-up is the Mobile Home Set-Up Permit ($300.00, all sizes), which does not include electrical — the service or reconnect is a separate Electrical permit.`);
+  } else {
+    notes.push(`Already improved: ${p.bld} building${p.bld === 1 ? '' : 's'} on the roll${p.liv ? ` totalling ${p.liv.toLocaleString('en-US')} sq ft of living area` : ''}, so most work here is renovation or addition. An addition is charged at the per-square-foot rate; a porch, covered patio or attached carport is $125.00 flat; an uncovered deck or ramp is $100.00.`);
   }
 
-  features.forEach((p, i) => {
-    const useCode = (p.DOR_UC || '').toString().padStart(2, '0');
-    const useLabel = DOR_USE_CODES[useCode] || 'Unknown / not in standard DOR schedule';
-    const addr = [p.PHY_ADDR1, p.PHY_CITY, p.PHY_ZIPCD].filter(Boolean).join(', ');
-    const owner = p.OWN_NAME || 'Not on file';
-    const legal = p.S_LEGAL || 'Not on file';
-    const acreage = p.LND_SQFOOT ? (p.LND_SQFOOT / 43560).toFixed(2) + ' acres' : 'Not on file';
-    const jv = p.JV ? '$' + Number(p.JV).toLocaleString() : 'Not on file';
+  if (p.hs) {
+    notes.push('Owner-builder: the parcel carries a homestead exemption, so it is the owner\'s own residence and the owner-builder exemption is available to them (no exemption for pools, and the affidavit still applies).');
+  } else if (p.ost && p.ost !== 'FL') {
+    notes.push(`Owner-builder: the owner's mailing address is in ${p.ost} and there is no homestead here, so do not assume owner-builder status — it applies only to property the owner occupies.`);
+  }
 
-    lines.push(
-      (features.length > 1 ? `${i + 1}. ` : '') + `Parcel ${p.PARCEL_ID || searchedFor}\n` +
-      `Designation (DOR Use Code ${useCode}): ${useLabel}\n` +
-      `Site Address: ${addr || 'Not on file'}\n` +
-      `Owner of Record: ${owner}\n` +
-      `Legal Description: ${legal}\n` +
-      `Land Area: ${acreage}\n` +
-      `Just Value (most recent roll): ${jv}` +
-      (p.NO_RES_UNT ? `\nResidential Units: ${p.NO_RES_UNT}` : '') +
-      (p.ACT_YR_BLT ? `\nYear Built: ${p.ACT_YR_BLT}` : '')
-    );
-  });
+  notes.push('What the roll cannot tell you: it carries the tax use code, not zoning or the future land use category, and it says nothing about flood zone or the 75-foot river buffer. Density, setbacks and minimum lot size are decided by the future land use category on the county map, so confirm that before quoting what can be built.');
+  return notes;
+}
 
-  lines.push(
-    '\nThis is from the Florida Dept. of Revenue\'s statewide tax-roll data (updated a few times a year, not live) — treat the DOR Use Code as the designation, not the county\'s zoning district specifically. For anything legally significant, confirm on the county Property Appraiser\'s own site.'
-  );
+// A compact version of the same facts for the model to answer follow-up
+// questions against.
+function parcelContextBlock(p) {
+  const use = parcelUseLabel(p);
+  return [
+    `ACTIVE PARCEL (Liberty County ${PARCEL_META.assessmentYear || ''} tax roll, assessed January 1 — ownership and improvements only, NOT zoning, NOT future land use, NOT flood zone):`,
+    `Parcel number: ${p.id}`,
+    `Owner: ${p.own || 'not on the roll'}${p.hs ? ' (homestead exemption — owner-occupied)' : ''}`,
+    `Owner mailing: ${[p.oad, p.oci, p.ost, p.ozp].filter(Boolean).join(' ') || 'not on the roll'}`,
+    `Site address: ${[p.adr, p.cty, p.zip].filter(Boolean).join(', ') || 'none on the roll'}`,
+    `Tax roll use: ${use.label} (DOR code ${use.code})`,
+    `Land area: ${acresText(p)}${p.chk ? ' (the roll\'s acreage fields disagree — say so rather than relying on it)' : ''}`,
+    `Legal: ${p.leg || 'not on the roll'}`,
+    `Section/Township/Range: ${[p.sec, p.twn, p.rng].filter(Boolean).join('-') || 'not on the roll'}`,
+    `Improvements: ${p.bld ? `${p.bld} building(s), ${p.res || 0} residential unit(s), ${p.liv || 0} sq ft living area, built ${p.yr || 'unknown'}` : 'none on the roll (unimproved)'}`,
+    `Just value: ${p.jv ? money(p.jv) : 'not on the roll'}`,
+    p.syr ? `Last recorded sale: ${p.smo ? p.smo + '/' : ''}${p.syr}${p.spr ? ' for ' + money(p.spr) : ''}${p.bk ? `, OR book ${p.bk} page ${p.pg}` : ''}` : '',
+    '',
+    'Use these facts when they bear on the question. Acreage governs split and density questions; whether there are buildings governs new construction versus renovation; homestead indicates owner-occupancy for owner-builder. Do not state the zoning, future land use category, flood zone or river buffer from this data — it does not contain them.',
+  ].filter(Boolean).join('\n');
+}
 
-  return lines.join('\n\n');
+function formatParcelResult(data, searchedFor) {
+  const found = (data && data.parcels) || [];
+  if (!found.length) {
+    return `No parcel matching "${searchedFor}" is in the Liberty County tax roll this tool carries (${(data && data.meta && data.meta.count) || 0} parcels, ${(data && data.meta && data.meta.assessmentYear) || ''} roll). Check the number, or try the owner's last name or the road name — both work here. The Property Appraiser's own site is the live, authoritative source: use the "Look up a parcel" link above.`;
+  }
+
+  if (found.length > 1) {
+    const lines = [`${data.total} parcels match "${searchedFor}" by ${data.matchedOn}${data.total > found.length ? ` — the first ${found.length} are below` : ''}. Type the full parcel number to pull one up.`];
+    found.forEach((p, i) => {
+      const use = parcelUseLabel(p);
+      lines.push(`${i + 1}. ${p.id} — ${p.own || 'owner not on the roll'}\n${[p.adr, p.cty].filter(Boolean).join(', ') || 'no site address'} · ${acresText(p)} · ${use.label}`);
+    });
+    return lines.join('\n\n');
+  }
+
+  const p = found[0];
+  const notes = parcelPermitNotes(p);
+  return [
+    describeParcel(p),
+    '**What this means for permitting**',
+    notes.map(n => '- ' + n).join('\n\n'),
+    `_Liberty County ${data.meta.assessmentYear || ''} tax roll (Florida Department of Revenue), values as of January 1. Ask your next question and it will be answered for this parcel._`,
+  ].join('\n\n');
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -1122,6 +1295,12 @@ let isLoading = false;
 let lastError = null;
 let kbDropdownOpen = false;
 let historyOpen = false;
+
+// The parcel the conversation is currently about. Once one is pulled up,
+// every following question is answered for that property until it's cleared
+// or another parcel is looked up.
+let activeParcel = null;
+let PARCEL_META = {};
 
 // Mode: the public locked-down assistant by default; the fuller internal
 // assistant unlocks with the shared office password (enforced server-side).
@@ -1670,12 +1849,25 @@ function render() {
         \u{1F5FA}\uFE0F Look up a parcel
       </a>
     </div>
+    ${activeParcel ? `
+      <div class="parcel-bar">
+        <div class="pb-main">
+          <span class="pb-tag">On the counter</span>
+          <span class="pb-id">${escapeHtml(activeParcel.id)}</span>
+          <span class="pb-detail">${escapeHtml([activeParcel.own, [activeParcel.adr, activeParcel.cty].filter(Boolean).join(', '),
+            activeParcel.acres ? acresText(activeParcel) : '',
+            activeParcel.bld ? `${activeParcel.bld} building${activeParcel.bld === 1 ? '' : 's'}` : 'unimproved',
+            parcelUseLabel(activeParcel).label].filter(Boolean).join('  \u00B7  '))}</span>
+        </div>
+        <button class="pb-clear" onclick="clearActiveParcel()" title="Stop answering for this parcel">Clear</button>
+      </div>
+    ` : ''}
     <div class="chat" id="chatArea">
       ${messages.length === 0 ? `
         <div class="empty-state">
           <div class="icon">\u{1F4DA}</div>
           <h2>Ask about permits, fees, or forms</h2>
-          <p>Answers only from the Building Department Guide, the Permit Eligibility Guide, the Comprehensive Plan, the Land Development Code, the Fee Schedule, and the HB 803 memo. Ask about a whole project — "what are the steps and permits for building a pole barn house?" — to get a step-by-step walkthrough with an estimated fee breakdown. Type a parcel number directly to pull its designation from Florida's statewide parcel data.</p>
+          <p>Answers only from the Building Department Guide, the Permit Eligibility Guide, the Comprehensive Plan, the Land Development Code, the Fee Schedule, and the HB 803 memo. Ask about a whole project — "what are the steps and permits for building a pole barn house?" — to get a step-by-step walkthrough with an estimated fee breakdown. Type a parcel number — or an owner's last name or a road name — to pull the property up from the Liberty County tax roll, then keep asking and every answer applies to that parcel.</p>
           <div class="suggestion-row">
             ${SUGGESTIONS.map(s => `<button class="suggestion-chip" onclick="askSuggestion(this)">${escapeHtml(s)}</button>`).join('')}
           </div>
@@ -1734,7 +1926,7 @@ function render() {
         <input type="file" id="fileInput" multiple accept=".pdf,image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleFilePick(event)">
         <button class="attach-btn" title="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}>\u{1F4CE}</button>
       ` : ''}
-      <textarea id="questionInput" rows="1" placeholder="${UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number...' : 'Ask a question, or type a parcel number to look it up...'}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
+      <textarea id="questionInput" rows="1" placeholder="${UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number, owner or road...' : 'Ask a question, or type a parcel number, owner name or road...'}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
       <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking\u2026' : 'Ask'}</button>
     </div>
     <div class="disclaimer">Answers are drawn from Liberty County Building Department documents for general guidance only. For an official determination on any permit, fee, or code question, contact the Building Department directly.</div>
@@ -1801,9 +1993,17 @@ async function sendQuestion() {
   scrollToBottomNext = true;   // always show the question they just asked
   render();
 
-  if (!outgoing.length && looksLikeParcelId(question)) {
+  // A bare parcel number pulls the property up. A question with a parcel
+  // number inside it ("can 01-9S-3W-0000-1000 be split?") quietly sets that
+  // parcel first, then answers the question against it.
+  const embedded = outgoing.length ? null : extractParcelId(question);
+  if (embedded && looksLikeParcelId(question)) {
     await runParcelLookup(question);
+  } else if (!outgoing.length && !embedded && looksLikePropertySearch(question)
+             && await runPropertySearch(question)) {
+    /* the search found properties and has answered */
   } else {
+    if (embedded) await loadParcel(embedded);
     await runKnowledgeBaseQuestion(question, outgoing);
   }
 
@@ -1813,25 +2013,68 @@ async function sendQuestion() {
   render();
 }
 
+async function fetchParcel(parcelId) {
+  const response = await fetch("/api/parcel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ parcelId })
+  });
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Server responded with status ${response.status}`);
+  }
+  const data = await response.json();
+  PARCEL_META = data.meta || PARCEL_META;
+  return data;
+}
+
+// Sets the active parcel without saying anything — used when a parcel number
+// arrives inside a question.
+async function loadParcel(parcelId) {
+  try {
+    const data = await fetchParcel(parcelId);
+    if (data.parcels && data.parcels.length === 1) activeParcel = data.parcels[0];
+  } catch (err) {
+    /* the question still gets answered without the parcel */
+  }
+}
+
 async function runParcelLookup(parcelId) {
   try {
-    const response = await fetch("/api/parcel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parcelId })
+    const data = await fetchParcel(parcelId);
+    if (data.parcels && data.parcels.length === 1) activeParcel = data.parcels[0];
+    const answer = formatParcelResult(data, parcelId);
+    messages.push({
+      role: 'assistant',
+      content: answer,
+      sources: [{ source: 'Liberty County Tax Roll', section: `Florida Dept. of Revenue, ${data.meta && data.meta.assessmentYear ? data.meta.assessmentYear + ' roll' : 'assessment roll'}` }]
     });
-
-    if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      throw new Error(errBody.error || `Server responded with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const answer = formatParcelResult(data.features, parcelId);
-    messages.push({ role: 'assistant', content: answer, sources: [{ source: 'Florida DOR Parcel Data', section: 'Statewide Cadastral (live lookup)' }] });
   } catch (err) {
-    lastError = "Couldn't reach the parcel lookup service (" + err.message + "). Try the \"Look up a parcel\" link above to search directly on the county's site instead.";
+    lastError = "Couldn't reach the parcel lookup (" + err.message + "). Try the \"Look up a parcel\" link above to search the Property Appraiser's site instead.";
   }
+}
+
+// Returns true only if the search actually found property — otherwise the
+// question carries on to the knowledge base as though this never ran.
+async function runPropertySearch(term) {
+  try {
+    const data = await fetchParcel(term);
+    if (!data.parcels || !data.parcels.length) return false;
+    if (data.parcels.length === 1) activeParcel = data.parcels[0];
+    messages.push({
+      role: 'assistant',
+      content: formatParcelResult(data, term),
+      sources: [{ source: 'Liberty County Tax Roll', section: `Florida Dept. of Revenue, ${data.meta && data.meta.assessmentYear ? data.meta.assessmentYear + ' roll' : 'assessment roll'}` }]
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function clearActiveParcel() {
+  activeParcel = null;
+  render();
 }
 
 async function runKnowledgeBaseQuestion(question, outgoing) {
@@ -1851,9 +2094,15 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
     // wider net; single lookups stay tight to avoid diluting the context.
     await loadReferenceIndex();   // full LDC / Comp Plan text, fetched once
     const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9);
-    const contextText = relevantChunks.length
+    let contextText = relevantChunks.length
       ? relevantChunks.map(c => `[${c.source} \u2014 ${c.section}${c.page ? `, page ${c.page}` : ''}]\n${c.text}`).join('\n\n---\n\n')
       : '';
+
+    // The parcel on the counter goes in front of the reference material, so a
+    // question like "can this be split?" is answered for that property.
+    if (activeParcel) {
+      contextText = parcelContextBlock(activeParcel) + (contextText ? '\n\n---\n\n' + contextText : '');
+    }
 
     // Prior turns so follow-up questions make sense. Only the plain text is
     // sent \u2014 never the citations or any local metadata.
