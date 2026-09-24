@@ -2235,7 +2235,7 @@ function setParcelFlu(category) {
       : '';
     messages.push({
       role: 'assistant',
-      content: `Future land use set to **${category}** for parcel ${activeParcel.id}.\n\n${cat.density.charAt(0).toUpperCase() + cat.density.slice(1)}.${ceiling}\n\n${cat.note}\n\n_Set from the Future Land Use Map by staff, not from the tax roll. Every answer from here on uses this category._`,
+      content: `Future land use set to **${category}** for parcel ${activeParcel.id}.\n\n${cat.density.charAt(0).toUpperCase() + cat.density.slice(1)}.${ceiling}\n\n${cat.note}\n\n**It is set — just ask your next question.** Anything you ask from here is answered for this parcel as ${category}: how many homes can go here, whether it can be split, what a permit would cost. The category stays until you change it in the dropdown or press Clear.\n\n_Read off the Future Land Use Map by staff, not from the tax roll._`,
       sources: [{ source: 'Comprehensive Plan', section: 'Policy 1-2 — Future Land Use Map categories' }],
     });
     scrollToBottomNext = true;
