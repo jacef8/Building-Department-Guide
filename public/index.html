@@ -2025,6 +2025,7 @@ function render() {
                 ${m.files.map(f => `<span class="f">${f.kind === 'document' ? '\u{1F4C4}' : '\u{1F5BC}\uFE0F'} ${escapeHtml(f.name)}</span>`).join('')}
               </div>
             ` : ''}
+            ${m.replay ? `<div class="sent-files"><span class="f">\u{21BB} asked again with future land use: ${escapeHtml(m.replay)}</span></div>` : ''}
             ${m.streaming && !m.content
               ? '<div class="typing"><span></span><span></span><span></span></div>'
               : formatBubble(m.content)}
@@ -2224,7 +2225,7 @@ function clearActiveParcel() {
 // Staff read the category off the Future Land Use Map and set it here. It
 // stays with the parcel for the rest of the conversation, and every density
 // answer after that is computed from it.
-function setParcelFlu(category) {
+async function setParcelFlu(category) {
   if (!activeParcel) return;
   activeParcel.flu = category || null;
   if (category) {
@@ -2235,11 +2236,42 @@ function setParcelFlu(category) {
       : '';
     messages.push({
       role: 'assistant',
-      content: `Future land use set to **${category}** for parcel ${activeParcel.id}.\n\n${cat.density.charAt(0).toUpperCase() + cat.density.slice(1)}.${ceiling}\n\n${cat.note}\n\n**It is set — just ask your next question.** Anything you ask from here is answered for this parcel as ${category}: how many homes can go here, whether it can be split, what a permit would cost. The category stays until you change it in the dropdown or press Clear.\n\n_Read off the Future Land Use Map by staff, not from the tax roll._`,
+      content: `Future land use set to **${category}** for parcel ${activeParcel.id}.\n\n${cat.density.charAt(0).toUpperCase() + cat.density.slice(1)}.${ceiling}\n\n${cat.note}\n\n_Read off the Future Land Use Map by staff, not from the tax roll. Everything from here is answered for this parcel as ${category}, until you change it or press Clear._`,
       sources: [{ source: 'Comprehensive Plan', section: 'Policy 1-2 — Future Land Use Map categories' }],
     });
     scrollToBottomNext = true;
   }
+  persistActive();
+  render();
+
+  // An answer given before the category was set was answered without it, and
+  // it is still sitting there on screen. Ask it again so the visible answer
+  // matches what the tool now knows.
+  if (category) await reaskLastQuestion(category);
+}
+
+// The last real question — not a parcel number or a name search, both of which
+// are lookups rather than questions.
+function lastRealQuestion() {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== 'user' || !m.content) continue;
+    if (looksLikeParcelId(m.content) || extractParcelId(m.content) === m.content) return null;
+    if (looksLikePropertySearch(m.content)) return null;
+    return m.content;
+  }
+  return null;
+}
+
+async function reaskLastQuestion(category) {
+  const question = lastRealQuestion();
+  if (!question || isLoading) return;
+  messages.push({ role: 'user', content: question, replay: category });
+  isLoading = true;
+  scrollToBottomNext = true;
+  render();
+  await runKnowledgeBaseQuestion(question, []);
+  isLoading = false;
   persistActive();
   render();
 }
