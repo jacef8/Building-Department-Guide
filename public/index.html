@@ -243,6 +243,41 @@
     flex-shrink: 0;
   }
   .parcel-bar .pb-clear:hover { background: rgba(255, 255, 255, 0.26); }
+  .parcel-bar .pb-flu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .parcel-bar .pb-flu label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .parcel-bar .pb-flu select {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: #fff;
+    color: var(--navy);
+    max-width: 230px;
+  }
+  .parcel-bar .pb-flu a {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold-light);
+    text-decoration: underline;
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .parcel-bar { flex-wrap: wrap; }
+    .parcel-bar .pb-flu { width: 100%; }
+    .parcel-bar .pb-flu select { flex: 1; max-width: none; }
+  }
   @media (max-width: 640px) {
     .parcel-bar { padding: 9px 16px; }
     .parcel-bar .pb-detail { font-size: 12px; }
@@ -663,7 +698,9 @@ const DOC_LINKS = {
   'Permit Exemption Quick Reference': '/docs/permit-exemption-quick-reference.pdf',
   'Planning & Zoning Flow Chart': '/docs/planning-zoning-flow-chart.pdf',
   'Fee Resolution 2026': '/docs/building-fee-resolution-2026.pdf',
-  'DBPR License Abbreviations': '/docs/dbpr-license-abbreviations.pdf'
+  'DBPR License Abbreviations': '/docs/dbpr-license-abbreviations.pdf',
+  'Future Land Use Map': '/docs/future-land-use-map.pdf',
+  'Building Design Criteria': '/docs/building-design-criteria.pdf'
 };
 
 const KNOWLEDGE_BASE = [
@@ -837,6 +874,12 @@ const KNOWLEDGE_BASE = [
   // Board decision.
   { source: "Office Procedure", section: "Difference between the comp plan and the LDC — which one governs", text:
     "The difference between the Comprehensive Plan (the comp plan) and the Land Development Code (the LDC): the comp plan says what the county intends to happen, and the LDC is the rulebook that makes it happen. The Comprehensive Plan is the county's long-range policy document required by Chapter 163, Florida Statutes. It is written as goals, objectives and policies, carries the Future Land Use Map that gives every parcel a category (Agriculture, Rural Residential, Town Center, and so on), and sets the big limits such as density caps — 1 dwelling unit per 10 acres in Agriculture, up to 4 units per acre in Rural Village. The Land Development Code is the enforceable ordinance that carries the Plan out: setbacks, minimum lot sizes and widths, road right-of-way widths, sign sizes, tower rules, and the permit and review procedures. The Plan's Objective 1 requires growth to be managed through the Land Development Regulations that implement the Future Land Use Map, and Policy 1-1 lists what those regulations must cover. Where the two disagree the PLAN CONTROLS: Land Development Code Section 1.4 says its provisions are read unless doing so would be inconsistent with the Comprehensive Plan. Changing the Plan is a Comprehensive Plan Amendment ($1,500.00 small-scale under 10 acres, $5,000.00 large-scale); changing the Code is an Amendment to Land Development Regulations ($1,500.00); both are Board decisions, not staff decisions. Rule of thumb at the counter: if the answer is a number in a table (setback, lot width, fee), it is a Code question; if the answer depends on what the land is designated for, it is a Plan question, and a use the designation does not allow needs a Plan amendment or rezoning rather than a permit." },
+  { source: "Building Design Criteria", section: "Adopted code, wind speed, frost depth, plan sets and height limit", text:
+    "Liberty County's building design criteria, from the Building Department Questionnaire signed by the Building Official. Adopted building code: the 2023 IRC (International Residential Code). Wind speed: 130 mph — the form offers V or Vasd and neither was circled, so confirm which basis applies before a designer relies on it. Wind exposure category: B, a site protected from the wind in all four directions within a quarter mile by trees, hills or other buildings, which covers residential neighborhoods and wooded areas. Ground snow load and sloped roof snow load: left blank, as expected in Florida. Maximum frost depth: 18 inches. Number of plan sets required with an application: 2. Height restriction: yes — the questionnaire gives 45 feet. Note that the Land Development Code's minimum development standards table is more specific and more restrictive for houses: maximum height is 35 feet in low density residential, and 45 feet in medium-to-high density residential and in commercial, office and industrial. Use 35 feet for an ordinary single-family house and 45 feet for the denser and non-residential categories. Other building restrictions: none stated. Two fields were left unmarked on the questionnaire and should not be quoted as settled: allowable vertical foundation pressure (the choices are 2000, 1500 or 1000) and seismic site class (A through F). If a designer needs either, ask the Building Official rather than picking one." },
+  { source: "Comprehensive Plan", section: "Future land use categories and what each one allows (Policy 1-2)", text:
+    "The future land use categories on Liberty County's Future Land Use Map, with the density each one allows. Agriculture: one dwelling unit per ten acres (Policy 1-7) — cropland, pasture, orchards, groves, specialty farms and silviculture. Rural Village: two dwelling units per acre with no central water or sewer, four per acre where central water is available, never more than four; suburban or exurban residential predominant, all housing types from as low as one unit per five acres, neighborhood-scale business and churches and schools allowed, non-residential under 30 percent of the area and land coverage under 65 percent. Mixed Use Rural Residential: one dwelling unit per acre gross, non-residential under 20 percent, coverage under 65 percent. Mixed Use Suburban Residential: up to two dwelling units per acre consistent with state rules for wells and septic, commercial lot coverage including parking capped at 50 percent, commercial and public uses limited to five percent of the category. Town Center: two dwelling units per acre with no central service, four with central water, eight with both water and sewer; the historical town centers, roughly a 50-50 business and residential split, business coverage under 65 percent. Commercial: residential from one unit per five acres up to one per acre and no more than 30 percent of the area; land coverage up to 80 percent, or 65 percent adjoining residential. Industrial: no residential; light and heavy manufacturing, storage and distribution, hazardous waste disposal prohibited, coverage under 90 percent; the designated sites are North Florida Lumber on Hwy 12 south of Bristol, the Telogia Industrial Park on SR 65 South, the old Odom sawmill on SR 65 south of Hosford, the Foley Chip Mill and Sunshine State Cypress on SR 65 north of Hosford, and the CW Roberts asphalt plant on Hwy 20 in Hosford. Conservation and Open Space: extremely limited development, single family at not more than one unit per five acres under Policy 1-4, commercial and industrial prohibited, new subdivisions must cluster on uplands and any new lot with wetlands or floodplain must be at least five acres with enough upland for the whole footprint plus a 50-foot vegetated buffer. Public Institutional: the Liberty Correctional Institution and public infrastructure. Public Resource Management: public land for timber and hunting. Public Preservation: public land for passive recreation only." },
+  { source: "Comprehensive Plan", section: "How to tell which future land use category a parcel is in (Policy 1-2)", text:
+    "Determining a parcel's future land use category. The tax roll does not carry it and the DOR use code is not it — the category comes from the Future Land Use Map, and the Plan gives rules for reading the map. Boundary interpretation: where a land use boundary appears to follow a major road right-of-way, a canal, a natural water body, a section line or a corporate limit shown on the map, the boundary follows that feature; where no natural or geographic feature applies and the line appears to follow a property line, it follows property lines as they existed when the plan was adopted. Split parcels: if a parcel appears to be split by a land use boundary and the split portion would be precluded from development, the boundary is read to include the whole lot, so long as the extension is no more than 500 feet and adds no more than ten acres to that designation. Parent tract: a parent tract or parcel of record is land in a recorded subdivision, or land described definitely enough to establish its boundaries and recorded before September 24, 1992, or land under an agreement for deed executed before that date. Where a public state or county road existing on or before September 24, 1992 divides a parent tract, each side counts as its own parent tract for density and is granted the right to build at least one single family residential unit — which is how a parcel too small for its category's density can still get one house. Mapping errors: where the map labels or locates a designation wrongly and the record of the adoption hearings shows the Board approved a different category, the Board may instruct staff to correct it, with the correction submitted to the state for review; that is a Board action, not a counter decision." },
   { source: "Office Procedure", section: "Porches, covered patios, carports and decks — which fee applies", text:
     "How to charge a porch, covered patio, screen porch, carport or deck. A roofed porch, covered patio or attached carport — roofed, open sides, attached to a dwelling — is $125.00 flat, whatever its size. An uncovered deck, patio, steps or ramp is the Decks and Ramps fee, $100.00. Screening in an existing covered porch is $50.00 (screen only, no structural change). Enclosing a porch as heated living space is charged at the residential per-square-foot rate, $0.75 per sq ft, because it becomes living area — that is a room addition, not a porch. The porch fee is flat rather than per square foot because a porch is not living area: Land Development Code page 31 excludes porches from the minimum floor area a dwelling must have. Why a porch is not charged at the accessory building rate: the Code defines a porch as a roofed-over space attached to the outside of an exterior wall with no enclosure other than the exterior walls, and an attached structure that depends on the dwelling for structural support is part of the principal building, so it is permitted as part of the house. An owner-builder may build a porch on owner-occupied property. Any electrical — lights, fans, outlets — needs a separate Electrical permit. Setback trap to check at intake: the Code excludes only UNCOVERED porches, decks, steps and balconies from yard measurement, so a covered porch counts toward the required front, side and rear setbacks. Roofing over an existing uncovered deck therefore needs a setback check before the permit is issued, even though the deck itself did not." },
 ];
@@ -1166,6 +1209,76 @@ const DOR_USE_CODES = {
   '97': 'Outdoor Recreational/Park Land (private)', '98': 'Centrally Assessed', '99': 'Acreage Not Otherwise Classified'
 };
 
+// ══════════════════════════════════════════════════════════════════════
+// Future land use categories — Comprehensive Plan Policy 1-2, plus the
+// Agriculture cap in Policy 1-7 and the Policy 1-4 limit on environmentally
+// sensitive land. The tax roll does not carry the category, and no map data
+// exists in machine-readable form, so a staff member reads it off the Future
+// Land Use Map once; from there every density answer is exact arithmetic
+// rather than a guess.
+//
+// maxPerAcre is the ceiling with no central water or sewer, which is the
+// normal case in the county. Where central service changes the ceiling, the
+// note says so — it is never assumed.
+// ══════════════════════════════════════════════════════════════════════
+const FLU_CATEGORIES = {
+  'Agriculture': {
+    maxPerAcre: 0.1,
+    density: 'one dwelling unit per ten acres (Policy 1-7)',
+    note: 'Cropland, pasture, orchards, nurseries, groves, specialty farms and silviculture. The ten-acre cap does not change with central water or sewer.',
+  },
+  'Rural Village': {
+    maxPerAcre: 2,
+    density: 'two dwelling units per acre with no central water or sewer; four per acre where central water is available, and never more than four even with both',
+    note: 'Suburban or exurban residential is the predominant use, all housing types, from as low as one unit per five acres. Neighborhood-scale business, churches and schools are allowed at a compatible scale; non-residential should stay under 30 percent of the area, land coverage under 65 percent.',
+  },
+  'Mixed Use — Rural Residential': {
+    maxPerAcre: 1,
+    density: 'one dwelling unit per acre, gross',
+    note: 'Rural residential predominant, single family mostly. Neighborhood-scale business, schools and churches allowed at a compatible scale; non-residential under 20 percent of the area, land coverage under 65 percent.',
+  },
+  'Mixed Use — Suburban Residential': {
+    maxPerAcre: 2,
+    density: 'up to two dwelling units per acre, consistent with state rules for wells and septic tanks',
+    note: 'Existing development and areas placed to keep growth compact near Rural Villages. Neighborhood convenience commercial and public uses allowed, lot coverage including parking capped at 50 percent, and commercial plus public uses may not exceed five percent of the category.',
+  },
+  'Town Center': {
+    maxPerAcre: 2,
+    density: 'two dwelling units per acre with no central water or sewer; four with central water; eight with both central water and sewer',
+    note: 'The historical town centers. Offices, retail, lodging, restaurants, services, shopping, plus residential, medical, schools and churches — roughly a 50-50 split between business and residential, business land coverage under 65 percent.',
+  },
+  'Commercial': {
+    maxPerAcre: 1,
+    density: 'residential from one unit per five acres up to one unit per acre, and residential may not exceed 30 percent of the area',
+    note: 'Small and medium retail, restaurants, offices, feed and hardware stores. Land coverage up to 80 percent, or 65 percent where it adjoins residential. Public infrastructure and institutional facilities allowed at the same intensity.',
+  },
+  'Industrial': {
+    maxPerAcre: 0,
+    density: 'no residential density — the category is devoted to industrial development',
+    note: 'Light and heavy manufacturing, storage and distribution; hazardous waste disposal is prohibited and land coverage should not exceed 90 percent. The Plan designates specific industrial sites: the North Florida Lumber pole and sawmill on Hwy 12 south of Bristol, the Telogia Industrial Park on SR 65 South, the old Odom sawmill site on SR 65 south of Hosford, the Foley Chip Mill and Sunshine State Cypress sites on SR 65 north of Hosford, and the CW Roberts asphalt plant on Hwy 20 in Hosford.',
+  },
+  'Conservation / Open Space': {
+    maxPerAcre: 0.2,
+    density: 'single family residential at not more than one unit per five acres, and only where the Plan allows development at all (Policy 1-4)',
+    note: 'Extremely limited development potential because of wetlands or environmental sensitivity. Commercial, industrial and waste disposal uses are prohibited. New subdivisions must cluster on uplands, any new lot containing wetlands or floodplain must be at least five acres with enough uplands for the whole footprint plus a 50-foot vegetated buffer, and the wetlands must be platted as undevelopable.',
+  },
+  'Public Institutional': {
+    maxPerAcre: 0,
+    density: 'no residential density — public facilities',
+    note: 'The Liberty Correctional Institution and other public infrastructure serving areas outside the mixed use categories.',
+  },
+  'Public Resource Management': {
+    maxPerAcre: 0,
+    density: 'no residential density — public land managed for timber and hunting',
+    note: 'Publicly owned land designated for resource management, including timber harvesting and hunting.',
+  },
+  'Public Preservation': {
+    maxPerAcre: 0,
+    density: 'no residential density — passive recreation only',
+    note: 'Publicly owned land limited to passive recreation.',
+  },
+};
+
 // The roll stores the use code as three characters ("001", "087"); the
 // standard schedule above is keyed on the last two.
 function parcelUseLabel(p) {
@@ -1208,10 +1321,26 @@ function describeParcel(p) {
 // Deterministic notes — these come from the settled rules, not from the model,
 // so they say the same thing every time. Anything the roll cannot answer is
 // named as such rather than guessed.
+// Once the category is known, the ceiling on this parcel is arithmetic.
+function fluNote(p) {
+  const cat = FLU_CATEGORIES[p.flu];
+  if (!cat) return null;
+  const acres = p.acres || 0;
+  let line = `Future land use — ${p.flu} (read off the county map): ${cat.density}. ${cat.note}`;
+  if (acres && cat.maxPerAcre > 0) {
+    const max = Math.floor(acres * cat.maxPerAcre);
+    line += ` At ${acresText(p)}, that is a ceiling of about ${max} dwelling unit${max === 1 ? '' : 's'}${max === 0 ? ' — the parcel is under the minimum for even one, so a single home here rests on the parent-tract right rather than on density' : ''}.`;
+  }
+  line += ' Confirm the category against the Future Land Use Map before quoting it; where a boundary is unclear the Plan has a boundary interpretation rule, and a parent tract of record is granted at least one single family unit.';
+  return line;
+}
+
 function parcelPermitNotes(p) {
   const use = parcelUseLabel(p);
   const notes = [];
   const acres = p.acres || 0;
+  const flu = fluNote(p);
+  if (flu) notes.push(flu);
 
   if (acres >= 1) {
     const tenAcreLots = Math.floor(acres / 10);
@@ -1236,7 +1365,11 @@ function parcelPermitNotes(p) {
     notes.push(`Owner-builder: the owner's mailing address is in ${p.ost} and there is no homestead here, so do not assume owner-builder status — it applies only to property the owner occupies.`);
   }
 
-  notes.push('What the roll cannot tell you: it carries the tax use code, not zoning or the future land use category, and it says nothing about flood zone or the 75-foot river buffer. Density, setbacks and minimum lot size are decided by the future land use category on the county map, so confirm that before quoting what can be built.');
+  if (!flu) {
+    notes.push(`What the roll cannot tell you: it carries the tax use code, not the future land use category, and it says nothing about flood zone or the 75-foot river buffer. Density, setbacks and minimum lot size all turn on the future land use category. Find this parcel on the [Future Land Use Map](/docs/future-land-use-map.pdf) — it is in Section ${p.sec || '?'}, Township ${p.twn || '?'}, Range ${p.rng || '?'} — then set the category above and the density ceiling will be calculated for you.`);
+  } else {
+    notes.push('What the roll still cannot tell you: flood zone, wetlands, and the 75-foot native vegetation buffer required along the Apalachicola River, the Ochlockonee River, Telogia Creek and the New River. Those are checked separately.');
+  }
   return notes;
 }
 
@@ -1255,6 +1388,9 @@ function parcelContextBlock(p) {
     `Legal: ${p.leg || 'not on the roll'}`,
     `Section/Township/Range: ${[p.sec, p.twn, p.rng].filter(Boolean).join('-') || 'not on the roll'}`,
     `Improvements: ${p.bld ? `${p.bld} building(s), ${p.res || 0} residential unit(s), ${p.liv || 0} sq ft living area, built ${p.yr || 'unknown'}` : 'none on the roll (unimproved)'}`,
+    p.flu
+      ? `Future land use category: ${p.flu} — READ OFF THE COUNTY MAP BY STAFF, not from the roll. Density: ${FLU_CATEGORIES[p.flu].density}. ${FLU_CATEGORIES[p.flu].note} Use this for density, lot size and what uses are allowed.`
+      : 'Future land use category: NOT SET. Do not state or guess it. If the question turns on density, lot size or allowed use, say the category has to be read off the Future Land Use Map first, and give the rule for the category once known.',
     `Just value: ${p.jv ? money(p.jv) : 'not on the roll'}`,
     p.syr ? `Last recorded sale: ${p.smo ? p.smo + '/' : ''}${p.syr}${p.spr ? ' for ' + money(p.spr) : ''}${p.bk ? `, OR book ${p.bk} page ${p.pg}` : ''}` : '',
     '',
@@ -1859,6 +1995,14 @@ function render() {
             activeParcel.bld ? `${activeParcel.bld} building${activeParcel.bld === 1 ? '' : 's'}` : 'unimproved',
             parcelUseLabel(activeParcel).label].filter(Boolean).join('  \u00B7  '))}</span>
         </div>
+        <div class="pb-flu">
+          <label for="fluPick">Future land use</label>
+          <select id="fluPick" onchange="setParcelFlu(this.value)">
+            <option value="">not set — read it off the map</option>
+            ${Object.keys(FLU_CATEGORIES).map(c => `<option value="${escapeHtml(c)}"${activeParcel.flu === c ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+          </select>
+          <a href="/docs/future-land-use-map.pdf" target="_blank" rel="noopener" title="Open the Future Land Use Map">Open map</a>
+        </div>
         <button class="pb-clear" onclick="clearActiveParcel()" title="Stop answering for this parcel">Clear</button>
       </div>
     ` : ''}
@@ -2074,6 +2218,29 @@ async function runPropertySearch(term) {
 
 function clearActiveParcel() {
   activeParcel = null;
+  render();
+}
+
+// Staff read the category off the Future Land Use Map and set it here. It
+// stays with the parcel for the rest of the conversation, and every density
+// answer after that is computed from it.
+function setParcelFlu(category) {
+  if (!activeParcel) return;
+  activeParcel.flu = category || null;
+  if (category) {
+    const cat = FLU_CATEGORIES[category];
+    const acres = activeParcel.acres || 0;
+    const ceiling = acres && cat.maxPerAcre > 0
+      ? ` At ${acresText(activeParcel)}, the ceiling is about ${Math.floor(acres * cat.maxPerAcre)} dwelling unit(s).`
+      : '';
+    messages.push({
+      role: 'assistant',
+      content: `Future land use set to **${category}** for parcel ${activeParcel.id}.\n\n${cat.density.charAt(0).toUpperCase() + cat.density.slice(1)}.${ceiling}\n\n${cat.note}\n\n_Set from the Future Land Use Map by staff, not from the tax roll. Every answer from here on uses this category._`,
+      sources: [{ source: 'Comprehensive Plan', section: 'Policy 1-2 — Future Land Use Map categories' }],
+    });
+    scrollToBottomNext = true;
+  }
+  persistActive();
   render();
 }
 
