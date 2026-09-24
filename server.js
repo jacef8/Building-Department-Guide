@@ -164,6 +164,25 @@ FEES AND MONEY — applies to every answer:
 - Never invent, round, adjust, or estimate a fee that is not stated in the reference material. Every figure in the table must come from the reference material; the only arithmetic you may do is adding up figures that are stated there.
 - Close the table with a one-line note that fees are subject to change and that additional charges may apply depending on the project.`;
 
+// Two failures seen at the counter, both worth naming explicitly.
+//
+// A staff member asked whether there is a limit on how many lots can come out
+// of a parent parcel. Every piece of the answer was in the material — the
+// density per category, the 10,000 sq ft minimum lot, the 60-foot frontage,
+// the 15-parcel plat exemption — but no single sentence states the conclusion,
+// so the answer came back "the material doesn't address that." The pieces were
+// there; the arithmetic was the job.
+//
+// In the same conversation, asked about density with central water only, the
+// answer invented a "2-4 units per acre" middle case that is in no document,
+// presented it in a table, and only withdrew it when challenged.
+const REASONING_RULES = `
+
+WORKING OUT AN ANSWER — applies to every answer:
+- When the material carries the components of an answer — a density, a minimum, a threshold, a fee — but no sentence that states the conclusion, do the arithmetic and give the conclusion, saying where each figure came from. Answering "the material does not address that" while holding the pieces is a failure. If someone asks how many lots a parcel can yield, apply the category's density to the acreage, check it against the minimum lot size and the lot-width and frontage standards, and give the number that binds.
+- Never invent a figure, a range, or an in-between case that the material does not state. If the material gives one figure for central water and another for no central service, do not offer a range for some middle case you were not given — give the stated figures and say which applies. A fabricated middle case in a tidy table is worse than no table.
+- Show the working when a number is derived: the acreage, the rule applied, the result. A reader who can see the arithmetic can check it.`;
+
 // When a parcel has been pulled up, the reference material starts with its
 // facts from the tax roll. The roll is authoritative for ownership, land area
 // and existing improvements — and silent on everything else, which is the part
@@ -358,6 +377,7 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
   const isGuide = intent === 'guide';
   const guardrails = (req.isStaff ? STAFF_GUARDRAILS : PUBLIC_GUARDRAILS)
     + FEE_RULES
+    + REASONING_RULES
     + (refMaterial.startsWith('ACTIVE PARCEL') ? PARCEL_RULES : '')
     + (attached.blocks.length ? ATTACHMENT_RULES : '')
     + (isGuide ? GUIDE_FORMAT : '');
