@@ -98,8 +98,11 @@ function tidy(s) {
     };
 
     for (const raw of lines) {
+      // The extractor writes "-- 7 of 138 --" at the END of page 7, so text
+      // after the marker belongs to page 8. Reading it as page 7 put every
+      // citation one page low, landing readers on the page before the rule.
       const pm = raw.match(/^-- (\d+) of \d+ --$/);
-      if (pm) { page = Number(pm[1]); continue; }
+      if (pm) { page = Number(pm[1]) + 1; continue; }
       if (isFurniture(raw)) continue;
       const h = headingOf(raw);
       if (h) {

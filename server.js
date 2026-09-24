@@ -164,6 +164,19 @@ FEES AND MONEY — applies to every answer:
 - Never invent, round, adjust, or estimate a fee that is not stated in the reference material. Every figure in the table must come from the reference material; the only arithmetic you may do is adding up figures that are stated there.
 - Close the table with a one-line note that fees are subject to change and that additional charges may apply depending on the project.`;
 
+// Inline citations are turned into links by the browser, which opens the cited
+// page of the PDF and highlights the passage. That only works if the marker
+// carries the page number exactly as the passage header gives it.
+const CITATION_RULES = `
+
+CITING AS YOU GO:
+- Each passage below is headed with its source and page, like [Land Development Code — Section 5.4, page 115]. When a sentence in your answer rests on one of those passages, end that sentence with a marker in square brackets giving the source and the page exactly as the header gives them: [Land Development Code, p. 115]. Never guess or adjust a page number; if the header has no page, cite it as [Building Guide] with no page.
+- One marker per sentence, on the sentences that carry a rule, a figure or a threshold. Do not mark every sentence, and do not stack markers.
+- Keep writing normally around the markers — they are not a bibliography, they are how the reader opens the page and sees the rule for themselves.
+
+WHEN A THRESHOLD DECIDES THE ANSWER:
+- Say what happens on both sides of it, briefly, so the reader can see where the line is. "Three lots makes it a subdivision, so it needs plat approval [Land Development Code, p. 110]; at two lots it would be a Property Split Review at $150.00 instead." One sentence of contrast is enough — do not write out a second full answer for the case they did not ask about.`;
+
 // Two failures seen at the counter, both worth naming explicitly.
 //
 // A staff member asked whether there is a limit on how many lots can come out
@@ -378,6 +391,7 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
   const guardrails = (req.isStaff ? STAFF_GUARDRAILS : PUBLIC_GUARDRAILS)
     + FEE_RULES
     + REASONING_RULES
+    + CITATION_RULES
     + (refMaterial.startsWith('ACTIVE PARCEL') ? PARCEL_RULES : '')
     + (attached.blocks.length ? ATTACHMENT_RULES : '')
     + (isGuide ? GUIDE_FORMAT : '');

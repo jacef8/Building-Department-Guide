@@ -335,6 +335,19 @@
     transition: all 0.15s ease;
   }
   a.citation-tag { cursor: pointer; }
+  .inline-cite {
+    color: var(--navy);
+    background: var(--gold-light);
+    border-bottom: 1px solid var(--gold);
+    border-radius: 3px;
+    padding: 0 3px;
+    text-decoration: none;
+    font-size: 0.92em;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .inline-cite:hover { background: var(--gold); color: #3B2E05; }
+
   a.citation-tag:hover { background: var(--gold-light); border-color: var(--gold); transform: translateY(-1px); }
   .msg.assistant .sources-used {
     margin-top: 14px;
@@ -1829,7 +1842,28 @@ function splitRow(line) {
   return line.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
 }
 
-function formatBubble(text) {
+// Turns the markers the answer writes — [Land Development Code, p. 115] —
+// into links that open that page with the passage highlighted. A marker whose
+// source and page don't match anything that was actually retrieved is left as
+// plain text rather than linked to a page nobody cited.
+function linkifyCitations(html, sources) {
+  if (!sources || !sources.length) return html;
+  return html.replace(/\[([A-Za-z0-9][A-Za-z0-9 &'’\-\.]{2,60}?)(?:,\s*p\.?\s*(\d+))?\]/g, (whole, name, page) => {
+    const key = name.trim();
+    if (!DOC_LINKS[key]) return whole;
+    // Prefer an indexed passage from that page — it carries the sentence to
+    // highlight. Curated entries have no page behind them, so a marker citing
+    // a page still opens that page, just without a highlight.
+    const onPage = page && sources.find(s => s.source === key && s.id && String(s.page) === page);
+    const url = onPage ? sourceViewerUrl(onPage)
+      : page ? sourceViewerUrl({ source: key, page: Number(page), id: 'cited' })
+      : sourceViewerUrl({ source: key });
+    if (!url) return whole;
+    return `<a class="inline-cite" href="${url}" target="_blank" rel="noopener" title="Open this page of the ${escapeHtml(key)}">${escapeHtml(whole)}</a>`;
+  });
+}
+
+function formatBubble(text, sources) {
   const lines = escapeHtml(text).split('\n');
   const out = [];
   let para = [];
@@ -1902,7 +1936,7 @@ function formatBubble(text) {
   }
 
   flushAll();
-  return out.join('');
+  return linkifyCitations(out.join(''), sources);
 }
 
 function render() {
@@ -2032,18 +2066,15 @@ function render() {
             ${m.replay ? `<div class="sent-files"><span class="f">\u{21BB} asked again with future land use: ${escapeHtml(m.replay)}</span></div>` : ''}
             ${m.streaming && !m.content
               ? '<div class="typing"><span></span><span></span><span></span></div>'
-              : formatBubble(m.content)}
+              : formatBubble(m.content, m.sources)}
             ${m.sources && m.sources.length && !m.streaming ? `
               <div class="sources-used">
                 ${m.sources.map(s => {
                   const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}${s.page && s.id ? `, p. ${s.page}` : ''}`;
-                  const url = DOC_LINKS[s.source];
-                  if (url && s.page) {
-                    return `<a class="citation-tag" href="${url}#page=${s.page}" target="_blank" rel="noopener">${label}</a>`;
-                  } else if (url) {
-                    return `<a class="citation-tag" href="${url}" target="_blank" rel="noopener">${label}</a>`;
-                  }
-                  return `<span class="citation-tag">${label}</span>`;
+                  const url = sourceViewerUrl(s);
+                  return url
+                    ? `<a class="citation-tag" href="${url}" target="_blank" rel="noopener">${label}</a>`
+                    : `<span class="citation-tag">${label}</span>`;
                 }).join('')}
               </div>
             ` : ''}
@@ -2221,6 +2252,21 @@ async function runPropertySearch(term) {
   }
 }
 
+// A citation should land the reader on the sentence. Where the passage came
+// from an indexed document we know its page and its text, so the link opens
+// the in-app page viewer, which highlights that passage. Curated entries have
+// no page behind them, so they open the document itself.
+function sourceViewerUrl(s) {
+  const doc = DOC_LINKS[s.source];
+  if (!doc) return null;
+  if (!s.page || !s.id) return doc;              // curated entry — no page to land on
+  const probe = (s.text || '').replace(/\s+/g, ' ').trim().split(' ').slice(0, 14).join(' ');
+  return '/source.html?doc=' + encodeURIComponent(doc)
+    + '&page=' + s.page
+    + '&label=' + encodeURIComponent(s.source)
+    + (probe ? '&q=' + encodeURIComponent(probe) : '');
+}
+
 function clearActiveParcel() {
   activeParcel = null;
   render();
@@ -2373,7 +2419,7 @@ async function consumeAnswerStream(response, sources) {
     // moved the bottom out from under them.
     const chat = document.getElementById('chatArea');
     const follow = chat ? isNearBottom(chat) : false;
-    bubble.innerHTML = formatBubble(msg.content);
+    bubble.innerHTML = formatBubble(msg.content, msg.sources);
     if (chat && follow) chat.scrollTop = chat.scrollHeight;
   };
 
