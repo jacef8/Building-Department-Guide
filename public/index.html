@@ -1675,6 +1675,10 @@ function persistActive() {
   }
   conv.messages = messages;
   conv.title = conversationTitle(messages);
+  // The parcel on the counter belongs to the conversation, not to the browser
+  // session: reopening "the Kerby split" should put Kerby's parcel back on the
+  // counter, and opening an unrelated conversation must not leave it there.
+  conv.parcel = activeParcel;
   conv.updated = Date.now();
   conversations = conversations.slice(0, MAX_CONVERSATIONS);
   saveHistory();
@@ -1682,6 +1686,7 @@ function persistActive() {
 
 function newConversation() {
   messages = [];
+  activeParcel = null;
   activeId = null;
   lastError = null;
   historyOpen = false;
@@ -1692,6 +1697,7 @@ function openConversation(id) {
   const conv = conversations.find(c => c.id === id);
   if (!conv) return;
   messages = conv.messages;
+  activeParcel = conv.parcel || null;
   activeId = id;
   lastError = null;
   historyOpen = false;
