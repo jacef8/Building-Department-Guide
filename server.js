@@ -561,13 +561,32 @@ app.post('/api/parcel', perIpParcelLimiter, (req, res) => {
     }
   }
 
+  const parcels = matches.slice(0, MAX_PARCEL_MATCHES);
   res.json({
     meta: PARCEL_META,
     matchedOn,
     total: matches.length,
-    parcels: matches.slice(0, MAX_PARCEL_MATCHES),
+    parcels,
+    related: parcels.length === 1 ? relatedParcels(parcels[0]) : undefined,
   });
 });
+
+// Parcels the Property Appraiser numbers under the same root — 0311N7W01239
+// followed by 000, 001, 003. In practice those are the pieces of one original
+// tract, which is how staff can see what has already come off a parent parcel
+// without researching the chain of title. It is the Appraiser's numbering
+// convention, not a legal record, so the assistant presents it as a lead to
+// confirm rather than as proof.
+const PARCEL_ROOT_LENGTH = 12;
+
+function relatedParcels(p) {
+  const root = (p.key || '').slice(0, PARCEL_ROOT_LENGTH);
+  if (root.length < PARCEL_ROOT_LENGTH) return [];
+  return PARCELS
+    .filter(o => o.key.startsWith(root) && o.key !== p.key)
+    .slice(0, 20)
+    .map(o => ({ id: o.id, own: o.own, acres: o.acres, adr: o.adr, splt: o.splt, uc: o.uc }));
+}
 
 // Health check — handy for Railway
 app.get('/health', (req, res) => res.json({ status: 'ok' }));

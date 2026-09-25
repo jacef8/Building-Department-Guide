@@ -1306,6 +1306,25 @@ function parcelUseLabel(p) {
 }
 
 const money = (n) => '$' + Number(n || 0).toLocaleString('en-US');
+
+// The tax roll reports every split and combine the Property Appraiser made
+// since the previous year's assessment: a five-digit code where the first
+// digit is 1 for a split or 2 for a combine, then the month and year.
+// "10725" is a split in July 2025. Nobody has to track this by hand — the
+// Appraiser records it and the county receives it every year.
+const MONTHS = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+
+function splitFlag(code) {
+  const v = String(code || '').padStart(5, '0');
+  if (!/^[12]\d{4}$/.test(v)) return null;
+  const month = Number(v.slice(1, 3));
+  const year = Number(v.slice(3));
+  return {
+    action: v[0] === '1' ? 'split' : 'combined',
+    when: `${MONTHS[month] || 'month ' + month} 20${String(year).padStart(2, '0')}`,
+  };
+}
 const acresText = (p) => p.acres ? `${p.acres.toLocaleString('en-US')} acre${p.acres === 1 ? '' : 's'}` : 'not on the roll';
 
 // What the roll says about the property, in the order someone at the counter
@@ -1333,6 +1352,13 @@ function describeParcel(p) {
   }
   rows.push(['Just value', p.jv ? money(p.jv) + (p.lv ? ` (land ${money(p.lv)})` : '') : 'not on the roll']);
   rows.push(['Homestead exemption', p.hs ? 'yes — the owner claims this as their residence' : 'no homestead on this parcel']);
+  const flag = splitFlag(p.splt);
+  if (flag) rows.push(['Split or combine on the roll', `${flag.action} in ${flag.when}, per the Property Appraiser`]);
+  if ((p.related || []).length) {
+    rows.push(['Parcels under the same root', (p.related || [])
+      .map(r => `${r.id} (${r.acres ? r.acres + ' ac' : 'acreage not on the roll'}, ${r.own || 'owner not on the roll'}${splitFlag(r.splt) ? `, ${splitFlag(r.splt).action} ${splitFlag(r.splt).when}` : ''})`)
+      .join('\n                            ')]);
+  }
   if (p.syr) rows.push(['Last recorded sale', `${p.smo ? p.smo + '/' : ''}${p.syr}${p.spr ? ' for ' + money(p.spr) : ''}${p.bk ? `, OR book ${p.bk} page ${p.pg}` : ''}`]);
   return rows.map(([k, v]) => `${k}: ${v}`).join('\n');
 }
@@ -1384,6 +1410,19 @@ function parcelPermitNotes(p) {
     notes.push(`Owner-builder: the owner's mailing address is in ${p.ost} and there is no homestead here, so do not assume owner-builder status — it applies only to property the owner occupies.`);
   }
 
+  const flag = splitFlag(p.splt);
+  const kin = (p.related || []).length;
+  if (flag || kin) {
+    const parts = [];
+    if (flag) parts.push(`The Property Appraiser recorded this parcel as ${flag.action} in ${flag.when}.`);
+    if (kin) {
+      const kinSplits = (p.related || []).filter(r => splitFlag(r.splt)).length;
+      parts.push(`The Appraiser numbers ${kin} other parcel${kin === 1 ? '' : 's'} under the same root as this one (${p.id.slice(0, 12)}…), which usually means they came off the same original tract${kinSplits ? `, and ${kinSplits} of them carries a split or combine flag of its own` : ''}. They are listed above.`);
+    }
+    parts.push('That is the Appraiser’s numbering and annual split flag, not a title search — it shows what has already come off this land without anyone tracking it by hand, but confirm it with the Property Appraiser before it decides an application.');
+    notes.push('Splits already recorded: ' + parts.join(' '));
+  }
+
   if (!flu) {
     notes.push(`What the roll cannot tell you: it carries the tax use code, not the future land use category, and it says nothing about flood zone or the 75-foot river buffer. Density, setbacks and minimum lot size all turn on the future land use category. Find this parcel on the [Future Land Use Map](/docs/future-land-use-map.pdf) — it is in Section ${p.sec || '?'}, Township ${p.twn || '?'}, Range ${p.rng || '?'} — then set the category above and the density ceiling will be calculated for you.`);
   } else {
@@ -1411,6 +1450,8 @@ function parcelContextBlock(p) {
       ? `Future land use category: ${p.flu} — READ OFF THE COUNTY MAP BY STAFF, not from the roll. Density: ${FLU_CATEGORIES[p.flu].density}. ${FLU_CATEGORIES[p.flu].note} Use this for density, lot size and what uses are allowed.`
       : 'Future land use category: NOT SET. Do not state or guess it. If the question turns on density, lot size or allowed use, say the category has to be read off the Future Land Use Map first, and give the rule for the category once known.',
     `Just value: ${p.jv ? money(p.jv) : 'not on the roll'}`,
+    splitFlag(p.splt) ? `Split history: the Property Appraiser recorded this parcel as ${splitFlag(p.splt).action} in ${splitFlag(p.splt).when}.` : '',
+    (p.related || []).length ? `Parcels numbered under the same root (usually pieces of the same original tract, per the Appraiser's numbering — a lead to confirm, not a title search): ${(p.related || []).map(r => `${r.id} ${r.acres || '?'} ac${splitFlag(r.splt) ? ' (' + splitFlag(r.splt).action + ' ' + splitFlag(r.splt).when + ')' : ''}`).join('; ')}` : '',
     p.syr ? `Last recorded sale: ${p.smo ? p.smo + '/' : ''}${p.syr}${p.spr ? ' for ' + money(p.spr) : ''}${p.bk ? `, OR book ${p.bk} page ${p.pg}` : ''}` : '',
     '',
     'Use these facts when they bear on the question. Acreage governs split and density questions; whether there are buildings governs new construction versus renovation; homestead indicates owner-occupancy for owner-builder. Do not state the zoning, future land use category, flood zone or river buffer from this data — it does not contain them.',
@@ -1433,6 +1474,7 @@ function formatParcelResult(data, searchedFor) {
   }
 
   const p = found[0];
+  if (data.related) p.related = data.related;
   const notes = parcelPermitNotes(p);
   return [
     describeParcel(p),
