@@ -13,23 +13,24 @@
 -->
 <style>
   :root {
-    --navy: #1B3A6B; --navy-dark: #14294C; --gold: #D9A520; --gold-light: #FBEBBE;
-    --bg: #EEF1F8; --ink: #1F2937; --mute: #6B7280; --line: #D8DEEA;
+    /* county document standard — same tokens as the assistant */
+    --maroon: #751D2C; --maroon-deep: #5E1723; --gold: #C1B572;
+    --tint: #F6F3E7; --bg: #FAF8F2; --ink: #231F20; --muted: #6B6258; --grid: #D3C9A2;
     color-scheme: light;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: Aptos, Calibri, "Segoe UI", system-ui, -apple-system, sans-serif;
     display: flex; flex-direction: column; min-height: 100dvh;
   }
   header {
-    background: var(--navy); color: #fff; padding: 10px 16px;
+    background: var(--maroon); color: #fff; padding: 10px 16px;
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     border-bottom: 3px solid var(--gold);
   }
   header .title { font-weight: 800; font-size: 15px; }
-  header .meta { font-size: 13px; color: var(--gold-light); }
+  header .meta { font-size: 13px; color: var(--tint); }
   header .spacer { flex: 1; }
   .btn {
     background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.35);
@@ -39,17 +40,17 @@
   .btn:hover { background: rgba(255,255,255,.26); }
   .btn[disabled] { opacity: .45; cursor: default; }
   main { flex: 1; overflow: auto; padding: 18px; display: flex; justify-content: center; }
-  .sheet { position: relative; box-shadow: 0 6px 24px rgba(15,23,42,.18); background: #fff; }
+  .sheet { position: relative; box-shadow: 0 6px 24px rgba(35,31,32,.18); background: #fff; }
   canvas { display: block; }
   .hl {
-    position: absolute; background: rgba(217,165,32,.38);
-    outline: 2px solid rgba(217,165,32,.85); border-radius: 2px;
+    position: absolute; background: rgba(193,181,114,.45);
+    outline: 2px solid var(--maroon); border-radius: 2px;
     pointer-events: none; mix-blend-mode: multiply;
   }
-  .status { padding: 30px; color: var(--mute); font-size: 15px; text-align: center; }
+  .status { padding: 30px; color: var(--muted); font-size: 15px; text-align: center; }
   .note {
-    background: var(--gold-light); color: #6B5A16; font-size: 13px;
-    padding: 7px 16px; border-bottom: 1px solid #E4D08A;
+    background: var(--tint); color: var(--ink); font-size: 13px;
+    padding: 7px 16px; border-bottom: 1px solid var(--grid);
   }
 </style>
 </head>

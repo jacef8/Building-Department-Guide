@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Liberty County Building Dept — Permit Assistant</title>
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#1B3A6B">
+<meta name="theme-color" content="#751D2C">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,22 +17,28 @@
 <body>
 <style>
   :root {
-    --navy: #1B3A6B;
-    --navy-dark: #0D1E3D;
-    --gold: #D9A520;
-    --gold-light: #FBEBBE;
-    --bg: #EEF1F8;
+    /* The county document standard (design directive, section 15): the Clerk
+       letterhead's PANTONE 188 C maroon and 4525 C gold, with the warm cream
+       tints between them. The assistant is the public face of the same
+       department whose guides, fee schedule and letters use these colours, so
+       an applicant sees one county rather than two. Gold is for rules and
+       borders only — never for text, which is too light to read on white. */
+    --maroon: #751D2C;        /* title bars, primary buttons, section bands */
+    --maroon-head: #8C3444;   /* secondary bars, table headers, small caps labels */
+    --maroon-deep: #5E1723;   /* hover / pressed */
+    --gold: #C1B572;          /* rules and borders only */
+    --tint: #F6F3E7;          /* row tint, callout fill, chips */
+    --tint-deep: #EFEADA;     /* the next step down, for a nested fill */
+    --bg: #FAF8F2;            /* page behind the panels */
     --panel: #FFFFFF;
-    --border: #E1E5EF;
-    --text: #12141A;
-    --text-mute: #6B7280;
-    --form-green: #3A6B2E;
-    --law-violet: #5B3A8E;
-    --danger: #B03A2E;
-    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, Helvetica, Arial, sans-serif;
-    --shadow-sm: 0 2px 6px rgba(16, 24, 40, 0.08);
-    --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.12);
-    --shadow-lg: 0 20px 50px rgba(16, 24, 40, 0.20);
+    --grid: #D3C9A2;          /* borders */
+    --ink: #231F20;           /* body text */
+    --muted: #6B6258;         /* notes, secondary text */
+    --danger: #B03A2E;        /* status only — errors and delete */
+    --font: Aptos, Calibri, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --shadow-sm: 0 2px 6px rgba(35, 31, 32, 0.08);
+    --shadow-md: 0 8px 24px rgba(35, 31, 32, 0.12);
+    --shadow-lg: 0 20px 50px rgba(35, 31, 32, 0.18);
   }
   * { box-sizing: border-box; }
   html, body {
@@ -49,14 +55,14 @@
     max-height: 100vh;
     font-family: var(--font);
     font-size: 17px;
-    color: var(--text);
-    background: radial-gradient(circle at 15% 0%, #F5F7FC 0%, var(--bg) 55%);
+    color: var(--ink);
+    background: radial-gradient(circle at 15% 0%, #FFFFFF 0%, var(--bg) 55%);
     overflow: hidden;
   }
 
   /* ── Header ───────────────────────────────────────────── */
   .header {
-    background: linear-gradient(120deg, var(--navy) 0%, var(--navy-dark) 100%);
+    background: linear-gradient(120deg, var(--maroon) 0%, var(--maroon-deep) 100%);
     color: white;
     padding: 16px 24px;
     display: flex;
@@ -64,13 +70,15 @@
     gap: 16px;
     position: relative;
     overflow: hidden;
+    /* the gold rule that closes a county title block */
+    border-bottom: 3px solid var(--gold);
   }
   .header::after {
     content: "";
     position: absolute;
     top: -60%; right: -10%;
     width: 320px; height: 320px;
-    background: radial-gradient(circle, rgba(217,165,32,0.28) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(193,181,114,0.22) 0%, transparent 70%);
     pointer-events: none;
   }
   .header .bell {
@@ -89,7 +97,7 @@
     font-size: 12px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--gold-light);
+    color: var(--tint);
     font-weight: 800;
   }
   .header h1 {
@@ -115,39 +123,43 @@
   /* ── Source / tools strip ─────────────────────────────── */
   .sources-strip {
     background: white;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--grid);
     padding: 10px 24px;
     display: flex;
     gap: 10px;
     align-items: center;
+    /* on a phone the row would otherwise push "+ New" and the parcel link off
+       the right edge, and nothing may scroll sideways */
+    flex-wrap: wrap;
     font-size: 14.5px;
-    color: var(--text-mute);
+    color: var(--muted);
     position: relative;
   }
+  .sources-strip .kb-toggle { white-space: nowrap; }
   .kb-toggle {
     display: inline-flex;
     align-items: center;
     gap: 9px;
     background: var(--bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--grid);
     border-radius: 6px;
     padding: 9px 15px;
     font-size: 14.5px;
     font-weight: 700;
-    color: var(--text);
+    color: var(--ink);
     cursor: pointer;
     transition: all 0.15s ease;
   }
-  .kb-toggle:hover { border-color: var(--gold); background: var(--gold-light); }
+  .kb-toggle:hover { border-color: var(--gold); background: var(--tint); }
   .kb-toggle .count-badge {
-    background: var(--navy);
+    background: var(--maroon);
     color: white;
     font-size: 12px;
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 4px;
   }
-  .kb-toggle .chevron { transition: transform 0.15s ease; font-size: 11px; color: var(--text-mute); }
+  .kb-toggle .chevron { transition: transform 0.15s ease; font-size: 11px; color: var(--muted); }
   .kb-toggle.open .chevron { transform: rotate(180deg); }
 
   .kb-dropdown {
@@ -155,7 +167,7 @@
     top: calc(100% + 4px);
     left: 24px;
     background: white;
-    border: 1px solid var(--border);
+    border: 1px solid var(--grid);
     border-radius: 8px;
     box-shadow: var(--shadow-lg);
     padding: 12px;
@@ -167,7 +179,7 @@
   }
   .kb-dropdown .doc-chip {
     background: var(--bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--grid);
     border-radius: 6px;
     padding: 9px 14px;
     display: flex;
@@ -175,22 +187,22 @@
     gap: 9px;
     font-weight: 600;
     font-size: 14px;
-    color: var(--text);
+    color: var(--ink);
     text-decoration: none;
     transition: all 0.15s ease;
   }
   a.doc-chip { cursor: pointer; }
-  a.doc-chip:hover { border-color: var(--gold); background: var(--gold-light); }
+  a.doc-chip:hover { border-color: var(--gold); background: var(--tint); }
   .doc-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
-  .doc-chip .chip-arrow { margin-left: auto; color: var(--text-mute); font-size: 13px; }
-  a.doc-chip:hover .chip-arrow { color: var(--navy); }
+  .doc-chip .chip-arrow { margin-left: auto; color: var(--muted); font-size: 13px; }
+  a.doc-chip:hover .chip-arrow { color: var(--maroon); }
 
   .parcel-link {
     margin-left: auto;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: var(--navy);
+    background: var(--maroon);
     color: white;
     text-decoration: none;
     padding: 10px 17px;
@@ -201,7 +213,7 @@
     transition: background 0.15s ease;
     white-space: nowrap;
   }
-  .parcel-link:hover { background: var(--navy-dark); }
+  .parcel-link:hover { background: var(--maroon-deep); }
 
   /* The parcel the conversation is about, held in view under the header so
      it's never a guess which property an answer is talking about. */
@@ -210,7 +222,7 @@
     align-items: center;
     gap: 14px;
     padding: 10px 24px;
-    background: var(--navy);
+    background: var(--maroon);
     color: #fff;
     border-bottom: 3px solid var(--gold);
   }
@@ -227,10 +239,11 @@
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--gold);
+    /* the standard allows white text on maroon, never gold text */
+    color: var(--tint);
   }
   .parcel-bar .pb-id { font-size: 15px; font-weight: 800; letter-spacing: 0.02em; }
-  .parcel-bar .pb-detail { font-size: 13px; color: var(--gold-light); }
+  .parcel-bar .pb-detail { font-size: 13px; color: var(--tint); }
   .parcel-bar .pb-clear {
     background: rgba(255, 255, 255, 0.14);
     color: #fff;
@@ -254,7 +267,8 @@
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--gold);
+    /* the standard allows white text on maroon, never gold text */
+    color: var(--tint);
   }
   .parcel-bar .pb-flu select {
     font: inherit;
@@ -263,13 +277,13 @@
     border-radius: 5px;
     border: 1px solid rgba(255, 255, 255, 0.35);
     background: #fff;
-    color: var(--navy);
+    color: var(--maroon);
     max-width: 230px;
   }
   .parcel-bar .pb-flu a {
     font-size: 12px;
     font-weight: 700;
-    color: var(--gold-light);
+    color: var(--tint);
     text-decoration: underline;
     white-space: nowrap;
   }
@@ -302,7 +316,7 @@
     margin-top: 2px;
     box-shadow: var(--shadow-sm);
   }
-  .msg.assistant .avatar { background: var(--navy); color: white; }
+  .msg.assistant .avatar { background: var(--maroon); color: white; }
   .msg.user .avatar { background: var(--gold); color: white; }
   .bubble {
     padding: 15px 19px;
@@ -316,7 +330,7 @@
     box-shadow: var(--shadow-md);
   }
   .msg.user .bubble {
-    background: var(--navy);
+    background: var(--maroon);
     color: white;
   }
   .bubble p { margin: 0 0 12px; }
@@ -326,8 +340,8 @@
     font-size: 12.5px;
     font-weight: 600;
     background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--navy);
+    border: 1px solid var(--grid);
+    color: var(--maroon);
     padding: 4px 11px;
     border-radius: 5px;
     margin: 4px 5px 0 0;
@@ -336,8 +350,8 @@
   }
   a.citation-tag { cursor: pointer; }
   .inline-cite {
-    color: var(--navy);
-    background: var(--gold-light);
+    color: var(--maroon);
+    background: var(--tint);
     border-bottom: 1px solid var(--gold);
     border-radius: 3px;
     padding: 0 3px;
@@ -346,19 +360,19 @@
     font-weight: 600;
     white-space: nowrap;
   }
-  .inline-cite:hover { background: var(--gold); color: #3B2E05; }
+  .inline-cite:hover { background: var(--tint-deep); color: var(--maroon-deep); border-color: var(--maroon); }
 
-  a.citation-tag:hover { background: var(--gold-light); border-color: var(--gold); transform: translateY(-1px); }
+  a.citation-tag:hover { background: var(--tint); border-color: var(--gold); transform: translateY(-1px); }
   .msg.assistant .sources-used {
     margin-top: 14px;
     padding-top: 14px;
-    border-top: 1px dashed var(--border);
+    border-top: 1px dashed var(--grid);
   }
 
   .empty-state {
     margin: auto;
     text-align: center;
-    color: var(--text-mute);
+    color: var(--muted);
     max-width: 520px;
   }
   .empty-state .icon {
@@ -370,13 +384,13 @@
     border-radius: 10px;
     box-shadow: var(--shadow-sm);
   }
-  .empty-state h2 { color: var(--navy); font-size: 24px; margin: 0 0 8px; font-weight: 800; letter-spacing: -0.02em; }
+  .empty-state h2 { color: var(--maroon); font-size: 24px; margin: 0 0 8px; font-weight: 800; letter-spacing: -0.02em; }
   .empty-state p { font-size: 16px; line-height: 1.6; margin: 0 0 20px; }
   .suggestion-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
   .suggestion-chip {
     background: white;
-    border: 1px solid var(--border);
-    color: var(--navy);
+    border: 1px solid var(--grid);
+    color: var(--maroon);
     font-size: 14.5px;
     font-weight: 600;
     padding: 10px 16px;
@@ -385,12 +399,12 @@
     box-shadow: var(--shadow-sm);
     transition: border-color 0.15s ease, background 0.15s ease;
   }
-  .suggestion-chip:hover { border-color: var(--gold); background: var(--gold-light); }
+  .suggestion-chip:hover { border-color: var(--gold); background: var(--tint); }
 
   .typing { display: flex; gap: 6px; padding: 8px 0; }
   .typing span {
     width: 8px; height: 8px; border-radius: 50%;
-    background: var(--text-mute);
+    background: var(--muted);
     animation: bounce 1.2s infinite ease-in-out;
   }
   .typing span:nth-child(2) { animation-delay: 0.15s; }
@@ -400,7 +414,7 @@
   /* ── Input ────────────────────────────────────────────── */
   .input-bar {
     background: white;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--grid);
     padding: 14px 24px;
     display: flex;
     gap: 12px;
@@ -409,7 +423,7 @@
   .input-bar textarea {
     flex: 1;
     resize: none;
-    border: 2px solid var(--border);
+    border: 2px solid var(--grid);
     border-radius: 8px;
     padding: 13px 16px;
     font-family: var(--font);
@@ -417,12 +431,12 @@
     line-height: 1.3;
     max-height: 96px;
     outline: none;
-    color: var(--text);
+    color: var(--ink);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  .input-bar textarea:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(27,58,107,0.08); }
+  .input-bar textarea:focus { border-color: var(--maroon); box-shadow: 0 0 0 3px rgba(27,58,107,0.08); }
   .input-bar button {
-    background: var(--navy);
+    background: var(--maroon);
     color: white;
     border: none;
     border-radius: 8px;
@@ -435,12 +449,12 @@
     transition: background 0.15s ease;
     flex-shrink: 0;
   }
-  .input-bar button:hover:not(:disabled) { background: var(--navy-dark); }
-  .input-bar button:disabled { background: #A9B4C4; cursor: not-allowed; }
+  .input-bar button:hover:not(:disabled) { background: var(--maroon-deep); }
+  .input-bar button:disabled { background: #C4BBA6; cursor: not-allowed; }
 
   .disclaimer {
     font-size: 12.5px;
-    color: var(--text-mute);
+    color: var(--muted);
     text-align: center;
     padding: 8px 18px 11px;
     background: white;
@@ -464,10 +478,10 @@
   .msg.assistant .bubble h4 {
     font-size: 15px;
     font-weight: 800;
-    color: var(--navy);
+    color: var(--maroon);
     margin: 16px 0 7px;
     padding-bottom: 5px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--grid);
     letter-spacing: 0.01em;
   }
   .msg.assistant .bubble h4:first-child { margin-top: 0; }
@@ -476,8 +490,8 @@
   .msg.assistant .bubble li { margin-bottom: 6px; line-height: 1.55; }
   .msg.assistant .bubble li:last-child { margin-bottom: 0; }
   .msg.assistant .bubble ol { counter-reset: none; }
-  .msg.assistant .bubble ol > li::marker { font-weight: 800; color: var(--navy); }
-  .msg.assistant .bubble strong { font-weight: 700; color: var(--navy-dark); }
+  .msg.assistant .bubble ol > li::marker { font-weight: 800; color: var(--maroon); }
+  .msg.assistant .bubble strong { font-weight: 700; color: var(--maroon-deep); }
   .msg.assistant .bubble table {
     border-collapse: collapse;
     width: 100%;
@@ -488,7 +502,7 @@
   }
   .msg.assistant .bubble th,
   .msg.assistant .bubble td {
-    border: 1px solid var(--border);
+    border: 1px solid var(--grid);
     padding: 7px 10px;
     text-align: left;
     vertical-align: top;
@@ -497,33 +511,33 @@
   .msg.assistant .bubble th {
     background: var(--bg);
     font-weight: 700;
-    color: var(--navy);
+    color: var(--maroon);
     white-space: nowrap;
   }
   .msg.assistant .bubble a {
-    color: var(--navy);
+    color: var(--maroon);
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 2px;
     /* long form URLs shouldn't blow out the bubble on a phone */
     overflow-wrap: anywhere;
   }
-  .msg.assistant .bubble a:hover { color: var(--gold); }
+  .msg.assistant .bubble a:hover { color: var(--maroon-deep); }
 
   /* ── Attachments ──────────────────────────────────────── */
   .attach-btn {
     flex-shrink: 0;
     width: 50px; height: 50px;
-    border: 2px solid var(--border);
+    border: 2px solid var(--grid);
     border-radius: 8px;
     background: white;
     font-size: 21px;
     line-height: 1;
     cursor: pointer;
-    color: var(--navy);
+    color: var(--maroon);
     transition: border-color 0.15s ease, background 0.15s ease;
   }
-  .attach-btn:hover:not(:disabled) { border-color: var(--gold); background: var(--gold-light); }
+  .attach-btn:hover:not(:disabled) { border-color: var(--gold); background: var(--tint); }
   .attach-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .attach-tray {
@@ -538,20 +552,20 @@
     align-items: center;
     gap: 9px;
     background: var(--bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--grid);
     border-radius: 6px;
     padding: 7px 9px 7px 11px;
     font-size: 13.5px;
     font-weight: 600;
-    color: var(--text);
+    color: var(--ink);
     max-width: 300px;
   }
   .attach-chip .kind { font-size: 15px; line-height: 1; }
   .attach-chip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .attach-chip .sz { color: var(--text-mute); font-weight: 500; font-size: 12.5px; }
+  .attach-chip .sz { color: var(--muted); font-weight: 500; font-size: 12.5px; }
   .attach-chip .rm {
     background: none; border: none; cursor: pointer;
-    color: var(--text-mute); font-size: 16px; line-height: 1;
+    color: var(--muted); font-size: 16px; line-height: 1;
     padding: 2px 4px; border-radius: 4px;
   }
   .attach-chip .rm:hover { color: var(--danger); background: #FDECEC; }
@@ -568,7 +582,7 @@
   .chat.dropping {
     outline: 3px dashed var(--gold);
     outline-offset: -10px;
-    background: var(--gold-light);
+    background: var(--tint);
   }
 
   /* ── History ──────────────────────────────────────────── */
@@ -577,20 +591,20 @@
     align-items: center;
     gap: 9px;
     background: var(--bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--grid);
     border-radius: 6px;
     padding: 9px 15px;
     font-family: var(--font);
     font-size: 14.5px;
     font-weight: 700;
-    color: var(--text);
+    color: var(--ink);
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.15s ease;
   }
-  .strip-btn:hover { border-color: var(--gold); background: var(--gold-light); }
+  .strip-btn:hover { border-color: var(--gold); background: var(--tint); }
   .strip-btn .count-badge {
-    background: var(--navy);
+    background: var(--maroon);
     color: white;
     font-size: 12px;
     font-weight: 700;
@@ -605,7 +619,7 @@
     right: 24px;
     max-width: 520px;
     background: white;
-    border: 1px solid var(--border);
+    border: 1px solid var(--grid);
     border-radius: 8px;
     box-shadow: var(--shadow-lg);
     z-index: 25;
@@ -619,9 +633,9 @@
     align-items: center;
     gap: 10px;
     padding: 12px 14px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--grid);
   }
-  .history-panel .hp-head strong { font-size: 14.5px; color: var(--navy); }
+  .history-panel .hp-head strong { font-size: 14.5px; color: var(--maroon); }
   .history-panel .hp-clear {
     margin-left: auto;
     background: none;
@@ -638,7 +652,7 @@
   .history-panel .hp-empty {
     padding: 22px 16px;
     text-align: center;
-    color: var(--text-mute);
+    color: var(--muted);
     font-size: 14.5px;
     line-height: 1.55;
   }
@@ -656,24 +670,24 @@
     font-family: var(--font);
     transition: background 0.12s ease, border-color 0.12s ease;
   }
-  .hp-item:hover { background: var(--bg); border-color: var(--border); }
-  .hp-item.active { background: var(--gold-light); border-color: var(--gold); }
+  .hp-item:hover { background: var(--bg); border-color: var(--grid); }
+  .hp-item.active { background: var(--tint); border-color: var(--gold); }
   .hp-item .hp-body { flex: 1; min-width: 0; }
   .hp-item .hp-title {
     font-size: 14.5px;
     font-weight: 600;
-    color: var(--text);
+    color: var(--ink);
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .hp-item .hp-meta { font-size: 12.5px; color: var(--text-mute); margin-top: 3px; }
+  .hp-item .hp-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
   .hp-del {
     background: none;
     border: none;
-    color: var(--text-mute);
+    color: var(--muted);
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
@@ -684,7 +698,7 @@
   .hp-del:hover { color: var(--danger); background: #FDECEC; }
 
   ::-webkit-scrollbar { width: 8px; }
-  ::-webkit-scrollbar-thumb { background: #C7CEDA; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--grid); border-radius: 8px; }
 </style>
 
 <div class="app" id="app"></div>
@@ -2003,7 +2017,7 @@ function render() {
 
   app.innerHTML = `
     <div class="header">
-      <div class="bell"><svg viewBox="0 0 24 24" width="26" height="26" fill="#0D1E3D" aria-hidden="true"><path d="M6.5 10h-2v7h2v-7zm6 0h-2v7h2v-7zM2 19h20v2H2v-2zm18.5-9h-2v7h2v-7zM12 3.26 17.21 6H6.79L12 3.26M12 1 2 6v2h20V6L12 1z"/></svg></div>
+      <div class="bell"><svg viewBox="0 0 24 24" width="26" height="26" fill="#751D2C" aria-hidden="true"><path d="M6.5 10h-2v7h2v-7zm6 0h-2v7h2v-7zM2 19h20v2H2v-2zm18.5-9h-2v7h2v-7zM12 3.26 17.21 6H6.79L12 3.26M12 1 2 6v2h20V6L12 1z"/></svg></div>
       <div class="titles">
         <div class="eyebrow">Liberty County Building Dept</div>
         <h1>Permit Assistant</h1>
@@ -2011,19 +2025,19 @@ function render() {
       <div class="badge">${IS_STAFF ? 'Staff mode' : `Informational \u00b7 ${uniqueSources.length} sources`}</div>
     </div>
     ${IS_STAFF ? `
-      <div class="disclaimer" style="background:#EAF1FB;color:#1B3A6B;border-bottom:1px solid var(--border);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
+      <div class="disclaimer" style="background:var(--tint);color:var(--maroon);border-bottom:1px solid var(--grid);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
         Internal staff assistant \u2014 not the public version.
-        <a href="#" onclick="previewPublic();return false;" style="color:#1B3A6B;font-weight:600;">See public version</a> \u00b7
-        <a href="#" onclick="staffLogout();return false;" style="color:#1B3A6B;font-weight:600;">Sign out</a>
+        <a href="#" onclick="previewPublic();return false;" style="color:var(--maroon);font-weight:600;">See public version</a> \u00b7
+        <a href="#" onclick="staffLogout();return false;" style="color:var(--maroon);font-weight:600;">Sign out</a>
       </div>
     ` : `
       ${PREVIEWING_PUBLIC ? `
-        <div class="disclaimer" style="background:#1B3A6B;color:#fff;padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
+        <div class="disclaimer" style="background:var(--maroon);color:#fff;padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
           Previewing the public version \u2014 answers use the public guardrails.
-          <a href="#" onclick="returnToStaff();return false;" style="color:var(--gold-light);font-weight:700;">Back to staff</a>
+          <a href="#" onclick="returnToStaff();return false;" style="color:var(--tint);font-weight:700;">Back to staff</a>
         </div>
       ` : ''}
-      <div class="disclaimer" style="background:var(--gold-light);color:#5A4408;border-bottom:1px solid var(--border);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
+      <div class="disclaimer" style="background:var(--tint);color:var(--ink);border-bottom:1px solid var(--grid);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
         General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.
       </div>
     `}
@@ -2510,7 +2524,7 @@ function renderStaffLogin(errMsg) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div class="header">
-      <div class="bell"><svg viewBox="0 0 24 24" width="24" height="24" fill="#0D1E3D" aria-hidden="true"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm3 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg></div>
+      <div class="bell"><svg viewBox="0 0 24 24" width="24" height="24" fill="#751D2C" aria-hidden="true"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6zm3 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4z"/></svg></div>
       <div class="titles">
         <div class="eyebrow">Liberty County Building Dept</div>
         <h1>Staff Sign-In</h1>
@@ -2523,12 +2537,12 @@ function renderStaffLogin(errMsg) {
       ${errMsg ? `<div class="error-banner" style="margin-bottom:14px;">${escapeHtml(errMsg)}</div>` : ''}
       <input id="staffPw" type="password" placeholder="Office password" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')staffLogin()"
-        style="width:100%;padding:12px 14px;font-size:15px;border:1px solid var(--border);border-radius:0;box-sizing:border-box;" />
+        style="width:100%;padding:12px 14px;font-size:15px;border:1px solid var(--grid);border-radius:0;box-sizing:border-box;" />
       <button onclick="staffLogin()"
-        style="width:100%;margin-top:12px;padding:12px;font:600 15px/1 var(--font,sans-serif);color:#fff;background:#1B3A6B;border:0;border-radius:0;cursor:pointer;">
+        style="width:100%;margin-top:12px;padding:12px;font:600 15px/1 var(--font,sans-serif);color:#fff;background:var(--maroon);border:0;border-radius:0;cursor:pointer;">
         Sign in
       </button>
-      <p style="margin-top:20px;font-size:13px;"><a href="/" style="color:#1B3A6B;">Continue to the public version →</a></p>
+      <p style="margin-top:20px;font-size:13px;"><a href="/" style="color:var(--maroon);">Continue to the public version →</a></p>
     </div>`;
   const el = document.getElementById('staffPw');
   if (el) el.focus();
