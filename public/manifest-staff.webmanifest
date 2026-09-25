@@ -1,15 +1,30 @@
 {
-  "name": "Liberty County Building Dept — Staff",
+  "name": "Liberty County Building Dept \u2014 Staff",
   "short_name": "Bldg Dept Staff",
   "id": "/staff",
   "start_url": "/staff",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0D1E3D",
-  "theme_color": "#1B3A6B",
+  "background_color": "#FAF8F2",
+  "theme_color": "#751D2C",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

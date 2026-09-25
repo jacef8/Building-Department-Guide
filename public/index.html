@@ -1751,6 +1751,52 @@ function newConversation() {
   render();
 }
 
+// A conversation saved before parcels were kept with them carries no parcel on
+// record — but it still contains one, in what was typed and in the report that
+// came back. Rather than leave the older history half useful, read the parcel
+// number and the land use category back out of the transcript.
+function parcelIdFromMessages(msgs) {
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (!m || !m.content) continue;
+    const stated = String(m.content).match(/^Parcel:\s*([0-9A-Za-z\-]{8,25})/m)
+      || String(m.content).match(/\bfor parcel\s+([0-9A-Za-z\-]{8,25})/i);
+    if (stated && looksLikeParcelId(stated[1])) return stated[1];
+    if (m.role === 'user') {
+      const typed = extractParcelId(m.content);
+      if (typed) return typed;
+    }
+  }
+  return null;
+}
+
+function fluFromMessages(msgs) {
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (!m || m.role !== 'assistant' || !m.content) continue;
+    const set = String(m.content).match(/Future land use set to \*\*(.+?)\*\*/);
+    if (set && FLU_CATEGORIES[set[1]]) return set[1];
+  }
+  return null;
+}
+
+async function restoreParcelFromTranscript(conv) {
+  const id = parcelIdFromMessages(conv.messages || []);
+  if (!id) return;
+  try {
+    const data = await fetchParcel(id);
+    if (!data.parcels || data.parcels.length !== 1) return;
+    if (activeId !== conv.id) return;          // they opened something else while it loaded
+    activeParcel = data.parcels[0];
+    if (data.related) activeParcel.related = data.related;
+    const flu = fluFromMessages(conv.messages || []);
+    if (flu) activeParcel.flu = flu;
+    conv.parcel = activeParcel;                // recorded, so this only happens once
+    saveHistory();
+    render();
+  } catch (err) { /* the conversation still opens, just without the parcel */ }
+}
+
 function openConversation(id) {
   const conv = conversations.find(c => c.id === id);
   if (!conv) return;
@@ -1760,6 +1806,7 @@ function openConversation(id) {
   lastError = null;
   historyOpen = false;
   scrollToBottomNext = true;
+  if (!activeParcel) restoreParcelFromTranscript(conv);
   render();
 }
 

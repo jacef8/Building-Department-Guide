@@ -1,12 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <!-- County colours: PANTONE 188 C maroon field with the PANTONE 4525 C gold
+       courthouse and rule, matching the Clerk letterhead and the department's
+       documents. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1B3A6B"/>
-      <stop offset="1" stop-color="#0D1E3D"/>
+      <stop offset="0" stop-color="#751D2C"/>
+      <stop offset="1" stop-color="#5E1723"/>
     </linearGradient>
   </defs>
   <rect width="100" height="100" fill="url(#bg)"/>
-  <g fill="#D9A520">
+  <g fill="#C1B572">
     <polygon points="50,24 25,40 75,40"/>
     <rect x="28" y="41.5" width="44" height="5"/>
     <rect x="30" y="48.5" width="6" height="20"/>
