@@ -531,13 +531,22 @@
     border: 2px solid var(--grid);
     border-radius: 8px;
     background: white;
-    font-size: 21px;
-    line-height: 1;
+    /* a drawn paperclip rather than the emoji: the emoji is a colour glyph, so
+       it ignored the maroon and rendered small, pale and fuzzy */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     color: var(--maroon);
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
   }
-  .attach-btn:hover:not(:disabled) { border-color: var(--gold); background: var(--tint); }
+  /* .input-bar button comes later and is more specific, so it was painting
+     this white and its padding squeezed the icon to nothing — scope past it */
+  .input-bar .attach-btn { padding: 0; background: white; color: var(--maroon); }
+  .input-bar .attach-btn:hover:not(:disabled) { background: var(--tint); color: var(--maroon-deep); }
+  .input-bar .attach-btn:disabled { background: white; }
+  .attach-btn svg { width: 28px; height: 28px; display: block; flex: none; }
+  .attach-btn:hover:not(:disabled) { border-color: var(--maroon); background: var(--tint); color: var(--maroon-deep); }
   .attach-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
   .attach-tray {
@@ -2217,7 +2226,7 @@ function render() {
     <div class="input-bar">
       ${UPLOADS_ENABLED ? `
         <input type="file" id="fileInput" multiple accept=".pdf,image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleFilePick(event)">
-        <button class="attach-btn" title="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}>\u{1F4CE}</button>
+        <button class="attach-btn" title="Attach a PDF or picture" aria-label="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
       ` : ''}
       <textarea id="questionInput" rows="1" placeholder="${UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number, owner or road...' : 'Ask a question, or type a parcel number, owner name or road...'}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
       <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking\u2026' : 'Ask'}</button>
