@@ -360,7 +360,9 @@
     .sources-strip.open { display: flex; flex-wrap: wrap; padding: 8px 14px; gap: 8px; }
     .sources-strip .kb-toggle,
     .sources-strip .strip-btn { padding: 6px 10px; font-size: 13px; }
-    .parcel-link { padding: 7px 11px; font-size: 13px; }
+    /* the desktop rule pushes this to the far right; on a wrapped tray row
+       that strands it alone against the edge */
+    .parcel-link { padding: 7px 11px; font-size: 13px; margin-left: 0; }
 
     .chat { padding: 12px 14px; }
     .msg .bubble { max-width: 100%; }
