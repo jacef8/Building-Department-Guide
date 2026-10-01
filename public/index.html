@@ -297,6 +297,65 @@
     .parcel-bar .pb-detail { font-size: 12px; }
   }
 
+  .disclaimer .short, .label-short { display: none; }
+
+  .sources-used > summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    list-style: none;
+    padding: 2px 0;
+  }
+  .sources-used > summary::-webkit-details-marker { display: none; }
+  .sources-used > summary::before { content: "▸ "; display: inline-block; }
+  .sources-used[open] > summary::before { content: "▾ "; }
+  @media (min-width: 701px) { .sources-used > summary { display: none; } }
+
+  /* ── Phones: give the answer the screen ───────────────────
+     Measured on a 375x812 phone, the chrome took 64% and the answer got 289px.
+     The header, the two disclaimers and the button strip are all useful at a
+     desk and all in the way on a phone, so on a small screen the header
+     collapses to one line, the strip to one row, the badge and the repeated
+     footer disclaimer go, and the top notice says the same thing in a
+     sentence. */
+  @media (max-width: 700px) {
+    .header { padding: 9px 14px; gap: 10px; border-bottom-width: 2px; }
+    .header .bell { width: 30px; height: 30px; border-radius: 6px; }
+    .header .bell svg { width: 18px; height: 18px; }
+    .header .eyebrow { font-size: 9.5px; letter-spacing: 0.1em; }
+    .header h1 { font-size: 17px; margin: 0; }
+    .header .badge { display: none; }
+    .header::after { display: none; }
+
+    .disclaimer { padding: 6px 14px; font-size: 11.5px; line-height: 1.35; }
+    .disclaimer .long { display: none; }
+    .disclaimer .short { display: inline; }
+    .label-long { display: none; }
+    .label-short { display: inline; }
+    /* the same words are already at the top — no need to repeat them under
+       the box where they cost a fifth of the screen */
+    .foot-notice { display: none; }
+
+    .sources-strip { padding: 6px 14px; gap: 7px; flex-wrap: nowrap; overflow: visible; }
+    .sources-strip .kb-toggle,
+    .sources-strip .strip-btn { padding: 6px 10px; font-size: 13px; }
+    .parcel-link { padding: 7px 11px; font-size: 13px; }
+
+    .chat { padding: 12px 14px; }
+    .msg .bubble { max-width: 100%; }
+    .input-bar { padding: 8px 12px; }
+    .input-bar textarea::placeholder { white-space: nowrap; text-overflow: ellipsis; }
+    /* nine citations at three lines each buried the answer they belong to */
+    .sources-used .citation-tag {
+      font-size: 12px;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
   /* ── Chat area ────────────────────────────────────────── */
   .chat {
     flex: 1;
@@ -2096,12 +2155,12 @@ function render() {
         </div>
       ` : ''}
       <div class="disclaimer" style="background:var(--tint);color:var(--ink);border-bottom:1px solid var(--grid);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
-        General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.
+        <span class="long">General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.</span><span class="short"><strong>Not an official determination</strong> \u2014 confirm with the Building Department.</span>
       </div>
     `}
     <div class="sources-strip">
       <button class="kb-toggle ${kbDropdownOpen ? 'open' : ''}" onclick="toggleKbDropdown(event)">
-        \u{1F4DA} Knowledge base <span class="count-badge">${uniqueSources.length}</span> <span class="chevron">\u25BC</span>
+        \u{1F4DA} <span class="label-long">Knowledge base</span><span class="label-short">Sources</span> <span class="count-badge">${uniqueSources.length}</span> <span class="chevron">\u25BC</span>
       </button>
       ${kbDropdownOpen ? `
         <div class="kb-dropdown">
@@ -2142,7 +2201,7 @@ function render() {
         </div>
       ` : ''}
       <a class="parcel-link" href="https://qpublic.schneidercorp.com/Application.aspx?App=LibertyCountyFL&Layer=Parcels&PageType=Search" target="_blank" rel="noopener">
-        \u{1F5FA}\uFE0F Look up a parcel
+        \u{1F5FA}\uFE0F <span class="label-long">Look up a parcel</span><span class="label-short">Parcel</span>
       </a>
     </div>
     ${activeParcel ? `
@@ -2190,7 +2249,8 @@ function render() {
               ? '<div class="typing"><span></span><span></span><span></span></div>'
               : formatBubble(m.content, m.sources)}
             ${m.sources && m.sources.length && !m.streaming ? `
-              <div class="sources-used">
+              <details class="sources-used"${window.innerWidth <= 700 ? '' : ' open'}>
+                <summary>${m.sources.length} source${m.sources.length === 1 ? '' : 's'}</summary>
                 ${m.sources.map(s => {
                   const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}${s.page && s.id ? `, p. ${s.page}` : ''}`;
                   const url = sourceViewerUrl(s);
@@ -2198,7 +2258,7 @@ function render() {
                     ? `<a class="citation-tag" href="${url}" target="_blank" rel="noopener">${label}</a>`
                     : `<span class="citation-tag">${label}</span>`;
                 }).join('')}
-              </div>
+              </details>
             ` : ''}
           </div>
         </div>
@@ -2228,10 +2288,12 @@ function render() {
         <input type="file" id="fileInput" multiple accept=".pdf,image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleFilePick(event)">
         <button class="attach-btn" title="Attach a PDF or picture" aria-label="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
       ` : ''}
-      <textarea id="questionInput" rows="1" placeholder="${UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number, owner or road...' : 'Ask a question, or type a parcel number, owner name or road...'}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
+      <textarea id="questionInput" rows="1" placeholder="${window.innerWidth <= 700
+        ? 'Ask, or type a parcel number'
+        : (UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number, owner or road...' : 'Ask a question, or type a parcel number, owner name or road...')}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
       <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking\u2026' : 'Ask'}</button>
     </div>
-    <div class="disclaimer">Answers are drawn from Liberty County Building Department documents for general guidance only. For an official determination on any permit, fee, or code question, contact the Building Department directly.</div>
+    <div class="disclaimer foot-notice">Answers are drawn from Liberty County Building Department documents for general guidance only. For an official determination on any permit, fee, or code question, contact the Building Department directly.</div>
   `;
 
   const chatArea = document.getElementById('chatArea');
