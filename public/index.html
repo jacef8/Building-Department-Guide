@@ -1603,7 +1603,7 @@ let toolsOpen = false;
 // Focus is now asked for explicitly, and never on a touch screen, where the
 // keyboard should only appear when someone taps the box themselves.
 let focusInputNext = false;
-const isTouch = window.matchMedia('(pointer: coarse)').matches;
+const isTouch = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
 
 // The parcel the conversation is currently about. Once one is pulled up,
 // every following question is answered for that property until it's cleared
