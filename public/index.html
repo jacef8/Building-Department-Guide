@@ -297,6 +297,22 @@
     .parcel-bar .pb-detail { font-size: 12px; }
   }
 
+  .tools-toggle {
+    display: none;                     /* phones only — see the media query */
+    margin-left: auto;
+    width: 38px; height: 38px;
+    align-items: center; justify-content: center;
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 7px;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative; z-index: 1;
+  }
+  .tools-toggle svg { width: 20px; height: 20px; }
+  .tools-toggle.open { background: #fff; color: var(--maroon); border-color: #fff; }
+
   .disclaimer .short, .label-short { display: none; }
 
   .sources-used > summary {
@@ -337,7 +353,11 @@
        the box where they cost a fifth of the screen */
     .foot-notice { display: none; }
 
-    .sources-strip { padding: 6px 14px; gap: 7px; flex-wrap: nowrap; overflow: visible; }
+    /* the four controls are occasional, so they live behind the header button
+       and take no room until they are asked for */
+    .tools-toggle { display: inline-flex; }
+    .sources-strip { display: none; }
+    .sources-strip.open { display: flex; flex-wrap: wrap; padding: 8px 14px; gap: 8px; }
     .sources-strip .kb-toggle,
     .sources-strip .strip-btn { padding: 6px 10px; font-size: 13px; }
     .parcel-link { padding: 7px 11px; font-size: 13px; }
@@ -1576,6 +1596,8 @@ let isLoading = false;
 let lastError = null;
 let kbDropdownOpen = false;
 let historyOpen = false;
+// On a phone the four strip controls live behind one button in the header.
+let toolsOpen = false;
 
 // The parcel the conversation is currently about. Once one is pulled up,
 // every following question is answered for that property until it's cleared
@@ -1815,6 +1837,7 @@ function persistActive() {
 function newConversation() {
   messages = [];
   activeParcel = null;
+  toolsOpen = false;
   activeId = null;
   lastError = null;
   historyOpen = false;
@@ -2140,6 +2163,7 @@ function render() {
         <h1>Permit Assistant</h1>
       </div>
       <div class="badge">${IS_STAFF ? 'Staff mode' : `Informational \u00b7 ${uniqueSources.length} sources`}</div>
+      <button class="tools-toggle ${toolsOpen ? 'open' : ''}" onclick="toggleTools(event)" aria-label="Sources, history and parcel lookup" title="Sources, history and parcel lookup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </div>
     ${IS_STAFF ? `
       <div class="disclaimer" style="background:var(--tint);color:var(--maroon);border-bottom:1px solid var(--grid);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
@@ -2158,7 +2182,7 @@ function render() {
         <span class="long">General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.</span><span class="short"><strong>Not an official determination</strong> \u2014 confirm with the Building Department.</span>
       </div>
     `}
-    <div class="sources-strip">
+    <div class="sources-strip ${toolsOpen ? 'open' : ''}">
       <button class="kb-toggle ${kbDropdownOpen ? 'open' : ''}" onclick="toggleKbDropdown(event)">
         \u{1F4DA} <span class="label-long">Knowledge base</span><span class="label-short">Sources</span> <span class="count-badge">${uniqueSources.length}</span> <span class="chevron">\u25BC</span>
       </button>
@@ -2307,6 +2331,13 @@ function render() {
   if (input) input.focus();
 }
 
+function toggleTools(e) {
+  if (e) e.stopPropagation();
+  toolsOpen = !toolsOpen;
+  if (!toolsOpen) { kbDropdownOpen = false; historyOpen = false; }
+  render();
+}
+
 function toggleKbDropdown(e) {
   if (e) e.stopPropagation();
   kbDropdownOpen = !kbDropdownOpen;
@@ -2316,11 +2347,13 @@ function toggleKbDropdown(e) {
 
 // Close the dropdown / history panel if the user clicks anywhere outside them
 document.addEventListener('click', (e) => {
-  if (!kbDropdownOpen && !historyOpen) return;
+  if (!kbDropdownOpen && !historyOpen && !toolsOpen) return;
   if (e.target.closest('.kb-toggle') || e.target.closest('.kb-dropdown') ||
-      e.target.closest('.strip-btn') || e.target.closest('.history-panel')) return;
+      e.target.closest('.strip-btn') || e.target.closest('.history-panel') ||
+      e.target.closest('.tools-toggle') || e.target.closest('.sources-strip')) return;
   kbDropdownOpen = false;
   historyOpen = false;
+  toolsOpen = false;
   render();
 });
 
