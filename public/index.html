@@ -1598,6 +1598,12 @@ let kbDropdownOpen = false;
 let historyOpen = false;
 // On a phone the four strip controls live behind one button in the header.
 let toolsOpen = false;
+// render() used to focus the question box every single time it ran, so opening
+// a menu yanked a phone to the bottom of the page and threw up the keyboard.
+// Focus is now asked for explicitly, and never on a touch screen, where the
+// keyboard should only appear when someone taps the box themselves.
+let focusInputNext = false;
+const isTouch = window.matchMedia('(pointer: coarse)').matches;
 
 // The parcel the conversation is currently about. Once one is pulled up,
 // every following question is answered for that property until it's cleared
@@ -2328,7 +2334,8 @@ function render() {
   }
 
   const input = document.getElementById('questionInput');
-  if (input) input.focus();
+  if (input && focusInputNext && !isTouch) input.focus();
+  focusInputNext = false;
 }
 
 function toggleTools(e) {
@@ -2407,6 +2414,7 @@ async function sendQuestion() {
 
   isLoading = false;
   input.value = '';
+  focusInputNext = true;
   persistActive();
   render();
 }
