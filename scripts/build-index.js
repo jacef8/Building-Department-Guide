@@ -38,6 +38,7 @@ const SOURCES = [
 const MAX = 1000;      // characters per passage
 const MIN = 220;       // don't emit slivers
 const OVERLAP = 180;   // carry the tail of the previous passage for context
+const TAIL_MIN = 60;   // the last scrap of a document is still worth keeping
 
 // lines that are page furniture, not content
 const isFurniture = (l) =>
@@ -188,13 +189,19 @@ function tidy(s) {
     const opening = big.title || '(front matter)';
     let page = 1, heading = opening, buf = '', bufPage = 1, bufHeading = heading, made = 0;
 
-    const flush = () => {
+    // Returns false when what had accumulated was too short to stand on its
+    // own. In that case the text stays in the buffer and joins the passage
+    // that follows, rather than being discarded with the heading change.
+    const flush = (final) => {
       const text = tidy(buf);
-      if (text.length >= MIN) {
+      if (text.length >= MIN || (final && text.length >= TAIL_MIN)) {
         out.push({ source: src.source, section: bufHeading, page: bufPage, text });
         made++;
+        buf = '';
+        return true;
       }
-      buf = '';
+      if (final) buf = '';
+      return false;
     };
 
     for (const raw of lines) {
@@ -206,8 +213,11 @@ function tidy(s) {
       if (isFurniture(raw)) continue;
       const h = headingOf(raw, big, repeated);
       if (h) {
-        flush();
-        heading = h; bufHeading = h; bufPage = page;
+        const emitted = flush(false);
+        heading = h;
+        // Only retitle the buffer when the previous passage actually closed.
+        // Carried-over text keeps the heading and page it started under.
+        if (emitted) { bufHeading = h; bufPage = page; }
         continue;
       }
       if (!buf) { bufPage = page; bufHeading = heading; }
@@ -222,7 +232,7 @@ function tidy(s) {
         bufPage = page; bufHeading = heading;
       }
     }
-    flush();
+    flush(true);
     console.log(`${src.source}: ${made} passages from ${res.pages ? res.pages.length : '?'} pages`);
   }
 

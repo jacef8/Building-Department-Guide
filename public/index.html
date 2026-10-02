@@ -1197,8 +1197,18 @@ function citableSources(chunks, scores, question) {
   if (!chunks || !chunks.length) return [];
   const top = scores.get(chunks[0]) || 0;
   if (!top) return [];
-  const words = Math.max(1, tokenize(question).length);
-  if (top / words < CITE_MIN_RELEVANCE) return [];
+  const asked = tokenize(question);
+  if (top / Math.max(1, asked.length) < CITE_MIN_RELEVANCE) return [];
+  // One strong match on one word is not a match on the question. "What is the
+  // staff password" cleared the gate on "staff" alone, against a passage
+  // titled "Summary checklist for staff". A question of two or more words has
+  // to be answered on at least two of them.
+  if (asked.length >= 2) {
+    const best = new Set();
+    chunks.slice(0, 3).forEach(c => chunkTokens(c).all.forEach(t => best.add(t)));
+    const matched = asked.filter(t => best.has(t)).length;
+    if (matched < 2) return [];
+  }
   return chunks.filter(c => (scores.get(c) || 0) >= top * CITE_TAIL_SHARE);
 }
 
