@@ -75,6 +75,8 @@ const url = params.get('doc');
 const wanted = Math.max(1, parseInt(params.get('page') || '1', 10));
 const phrase = (params.get('q') || '').trim();
 const label = params.get('label') || '';
+// the page the cited passage ends on, when it runs past the one it starts on
+const lastPage = Math.max(wanted, parseInt(params.get('last') || '0', 10) || wanted);
 
 const stage = document.getElementById('stage');
 const docName = document.getElementById('docName');
@@ -118,6 +120,30 @@ async function render(pageNo) {
 // Walk the page's text items and box the run that matches the cited phrase.
 // Matching is done on normalised text because a PDF breaks a sentence into
 // arbitrary pieces — "Lots shall front on a" / "street for at least 60'".
+// The whole phrase first, then progressively shorter leading fragments, so a
+// citation still lands when the page breaks mid-sentence.
+function probesFor(target) {
+  const words = target.split(' ');
+  const out = [];
+  for (let take = words.length; take >= 3; take--) out.push(words.slice(0, take).join(' '));
+  return out;
+}
+
+// Which page of the cited span actually carries the sentence. Returns the
+// cited page unchanged when the phrase is nowhere in the span, so a citation
+// never lands somewhere unrelated because of a loose match.
+async function locate() {
+  const target = norm(phrase);
+  if (!target || lastPage <= wanted) return wanted;
+  const probes = probesFor(target);
+  for (let p = wanted; p <= Math.min(lastPage, pdf.numPages); p++) {
+    const text = norm((await (await pdf.getPage(p)).getTextContent())
+      .items.map(i => i.str).join(' '));
+    if (probes.some(probe => text.includes(probe))) return p;
+  }
+  return wanted;
+}
+
 async function highlight(page, viewport, sheet) {
   const content = await page.getTextContent();
   const items = content.items.filter(i => i.str && i.str.trim());
@@ -137,7 +163,7 @@ async function highlight(page, viewport, sheet) {
     }
   }
   note.hidden = false;
-  note.textContent = 'Opened at the cited page. The exact sentence could not be located to highlight — it may run across a page break.';
+  note.textContent = 'Opened at the cited page. The exact sentence could not be located to highlight — it may be set as part of a table or an image.';
 }
 
 function findRun(items, probe) {
@@ -184,6 +210,13 @@ try {
     note.hidden = false;
     note.textContent = `That document has ${pdf.numPages} pages; opening the last one.`;
     current = pdf.numPages;
+  }
+  // A cited passage can run over a page break; open the page the sentence is on.
+  const landed = await locate();
+  if (landed !== current) {
+    note.hidden = false;
+    note.textContent = `The cited passage begins on page ${current} and runs on; opened at page ${landed}, where the sentence appears.`;
+    current = landed;
   }
   await render(current);
 } catch (err) {

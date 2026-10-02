@@ -2135,7 +2135,7 @@ function splitRow(line) {
 // plain text rather than linked to a page nobody cited.
 function linkifyCitations(html, sources) {
   if (!sources || !sources.length) return html;
-  return html.replace(/\[([A-Za-z0-9][A-Za-z0-9 &'’\-\.]{2,60}?)(?:,\s*p\.?\s*(\d+))?\]/g, (whole, name, page) => {
+  return html.replace(/\[([A-Za-z0-9][A-Za-z0-9 &'’\-\.]{2,60}?)(?:,\s*pp?\.?\s*(\d+)(?:\s*[–—-]\s*(\d+))?)?\]/g, (whole, name, page, last) => {
     const key = name.trim();
     if (!DOC_LINKS[key]) return whole;
     // Prefer an indexed passage from that page — it carries the sentence to
@@ -2143,7 +2143,7 @@ function linkifyCitations(html, sources) {
     // a page still opens that page, just without a highlight.
     const onPage = page && sources.find(s => s.source === key && s.id && String(s.page) === page);
     const url = onPage ? sourceViewerUrl(onPage)
-      : page ? sourceViewerUrl({ source: key, page: Number(page), id: 'cited' })
+      : page ? sourceViewerUrl({ source: key, page: Number(page), last: last ? Number(last) : 0, id: 'cited' })
       : sourceViewerUrl({ source: key });
     if (!url) return whole;
     return `<a class="inline-cite" href="${url}" target="_blank" rel="noopener" title="Open this page of the ${escapeHtml(key)}">${escapeHtml(whole)}</a>`;
@@ -2386,7 +2386,10 @@ function render() {
               <details class="sources-used"${window.innerWidth <= 700 ? '' : ' open'}>
                 <summary>${cited.length} source${cited.length === 1 ? '' : 's'}</summary>
                 ${cited.map(s => {
-                  const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}${s.page && s.id ? `, p. ${s.page}` : ''}`;
+                  // a passage that runs over a page break says both pages, so the
+                  // reader is not surprised to find the rule on the second one
+                  const pages = s.last && s.last > s.page ? `, pp. ${s.page}\u2013${s.last}` : `, p. ${s.page}`;
+                  const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}${s.page && s.id ? pages : ''}`;
                   const url = sourceViewerUrl(s);
                   return url
                     ? `<a class="citation-tag" href="${url}" target="_blank" rel="noopener">${label}</a>`
@@ -2594,6 +2597,7 @@ function sourceViewerUrl(s) {
   const probe = (s.text || '').replace(/\s+/g, ' ').trim().split(' ').slice(0, 14).join(' ');
   return '/source.html?doc=' + encodeURIComponent(doc)
     + '&page=' + s.page
+    + (s.last && s.last > s.page ? '&last=' + s.last : '')
     + '&label=' + encodeURIComponent(s.source)
     + (probe ? '&q=' + encodeURIComponent(probe) : '');
 }
@@ -2679,7 +2683,9 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
     // genuinely matched are listed to the reader as the basis of the answer.
     const shownSources = citableSources(relevantChunks, chunkScores, question);
     let contextText = relevantChunks.length
-      ? relevantChunks.map(c => `[${c.source} \u2014 ${c.section}${c.page ? `, page ${c.page}` : ''}]\n${c.text}`).join('\n\n---\n\n')
+      // A passage that runs over a page break names both pages, so a rule on
+      // the second one is not cited to the page before it.
+      ? relevantChunks.map(c => `[${c.source} \u2014 ${c.section}${c.page ? (c.last && c.last > c.page ? `, pages ${c.page}\u2013${c.last}` : `, page ${c.page}`) : ''}]\n${c.text}`).join('\n\n---\n\n')
       : '';
 
     // The parcel on the counter goes in front of the reference material, so a

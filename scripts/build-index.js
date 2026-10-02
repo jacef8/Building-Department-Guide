@@ -195,7 +195,10 @@ function tidy(s) {
     const flush = (final) => {
       const text = tidy(buf);
       if (text.length >= MIN || (final && text.length >= TAIL_MIN)) {
-        out.push({ source: src.source, section: bufHeading, page: bufPage, text });
+        const passage = { source: src.source, section: bufHeading, page: bufPage, text };
+        // where the passage ends, when that is not where it started
+        if (page > bufPage) passage.last = page;
+        out.push(passage);
         made++;
         buf = '';
         return true;
@@ -227,7 +230,12 @@ function tidy(s) {
         let keep = buf, rest = '';
         if (cut > MIN) { keep = buf.slice(0, cut + 1); rest = buf.slice(cut + 1).trim(); }
         const text = tidy(keep);
-        if (text.length >= MIN) { out.push({ source: src.source, section: bufHeading, page: bufPage, text }); made++; }
+        if (text.length >= MIN) {
+          const passage = { source: src.source, section: bufHeading, page: bufPage, text };
+          if (page > bufPage) passage.last = page;
+          out.push(passage);
+          made++;
+        }
         buf = (text.slice(-OVERLAP) + ' ' + rest).trim();
         bufPage = page; bufHeading = heading;
       }
