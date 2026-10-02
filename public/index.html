@@ -1093,7 +1093,9 @@ function chunkTokens(chunk) {
   return v;
 }
 
-function retrieveChunks(query, topN = 5) {
+// Pass a Map as scoreOut to receive each ranked chunk's score — the citation
+// list under an answer uses it to drop passages that only matched in passing.
+function retrieveChunks(query, topN = 5, scoreOut = null) {
   const pool = KNOWLEDGE_BASE.concat(REFERENCE_INDEX);
   const qRaw = tokenize(query);
   if (!qRaw.length) return [];
@@ -1154,7 +1156,44 @@ function retrieveChunks(query, topN = 5) {
     if (picked.length >= topN) break;
     if (!picked.includes(chunk)) picked.push(chunk);
   }
+  if (scoreOut) ranked.forEach(({ chunk, score }) => scoreOut.set(chunk, score));
   return picked;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Which of the retrieved passages are worth showing as citations
+//
+// Retrieval always returns its nine best guesses, and "best" only has to beat
+// a score of zero. Ask something the documents have nothing to say about and
+// it still returns nine — a staff member asking about the phone version of
+// this tool got the fee schedule, the exemption form and two sections of the
+// Code, which had matched on the words "using", "tool", "phone" and "use".
+// Listing them under the answer implies the answer came from them.
+//
+// Two filters, both measured against the retrieved scores rather than guessed:
+//   1. Relevance. Divide the top score by the number of content words in the
+//      question, so a long question isn't rewarded for accumulating matches.
+//      Across fifty real counter questions all but one scored 3.1 or better;
+//      across sixteen off-topic ones all but two scored under 2.8, and those
+//      two asked about printing and about a county commissioner — words the
+//      documents really do use. Below the gate nothing retrieved is about the
+//      question, so the list is dropped entirely.
+//   2. The tail. Within a relevant set, a passage scoring under a third of the
+//      top hit is background noise — on "what is the setback for a wellhead"
+//      that is the difference between four real citations and nine.
+// The passages still go to the model either way; this only governs what is
+// listed to the reader as the basis for the answer.
+// ══════════════════════════════════════════════════════════════════════
+const CITE_MIN_RELEVANCE = 3.0;   // top score per content word of the question
+const CITE_TAIL_SHARE = 0.3;      // keep passages scoring >= this share of the top
+
+function citableSources(chunks, scores, question) {
+  if (!chunks || !chunks.length) return [];
+  const top = scores.get(chunks[0]) || 0;
+  if (!top) return [];
+  const words = Math.max(1, tokenize(question).length);
+  if (top / words < CITE_MIN_RELEVANCE) return [];
+  return chunks.filter(c => (scores.get(c) || 0) >= top * CITE_TAIL_SHARE);
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -2075,8 +2114,32 @@ function linkifyCitations(html, sources) {
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// "This answer used none of the material"
+//
+// When a question is outside the documents the answer says so — but the nine
+// retrieved passages were still listed underneath it, which reads as though
+// the refusal was grounded in them. The instructions ask for a marker at the
+// end of any answer that declines, or that reports the material does not
+// cover the question; the marker is stripped before display and the citation
+// list is suppressed. Nothing an answer actually relied on is hidden, because
+// the marker is only written when it relied on nothing.
+// ══════════════════════════════════════════════════════════════════════
+const NO_SOURCES_MARK = /\[\[\s*NO_SOURCES\s*\]\]/gi;
+// mid-stream the marker arrives a few characters at a time, so a half-written
+// one at the very end is swallowed too rather than flashing on screen
+const NO_SOURCES_PARTIAL = /\[\[[A-Z_\s]*\]?\s*$/i;
+
+function declinedAnswer(text) {
+  return /\[\[\s*NO_SOURCES\s*\]\]/i.test(String(text || ''));
+}
+
+function stripNoSourcesMark(text) {
+  return String(text || '').replace(NO_SOURCES_MARK, '').replace(NO_SOURCES_PARTIAL, '').trimEnd();
+}
+
 function formatBubble(text, sources) {
-  const lines = escapeHtml(text).split('\n');
+  const lines = escapeHtml(stripNoSourcesMark(text)).split('\n');
   const out = [];
   let para = [];
   let list = null; // { tag: 'ul' | 'ol', items: [] }
@@ -2280,10 +2343,13 @@ function render() {
             ${m.streaming && !m.content
               ? '<div class="typing"><span></span><span></span><span></span></div>'
               : formatBubble(m.content, m.sources)}
-            ${m.sources && m.sources.length && !m.streaming ? `
+            ${(() => {
+              // conversations saved before this have no `shown`, so they render as before
+              const cited = declinedAnswer(m.content) ? [] : (m.shown || m.sources || []);
+              return cited.length && !m.streaming ? `
               <details class="sources-used"${window.innerWidth <= 700 ? '' : ' open'}>
-                <summary>${m.sources.length} source${m.sources.length === 1 ? '' : 's'}</summary>
-                ${m.sources.map(s => {
+                <summary>${cited.length} source${cited.length === 1 ? '' : 's'}</summary>
+                ${cited.map(s => {
                   const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}${s.page && s.id ? `, p. ${s.page}` : ''}`;
                   const url = sourceViewerUrl(s);
                   return url
@@ -2291,7 +2357,8 @@ function render() {
                     : `<span class="citation-tag">${label}</span>`;
                 }).join('')}
               </details>
-            ` : ''}
+            ` : '';
+            })()}
           </div>
         </div>
       `).join('')}
@@ -2570,7 +2637,11 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
     // Whole-project questions touch many sections at once, so they get a
     // wider net; single lookups stay tight to avoid diluting the context.
     await loadReferenceIndex();   // full LDC / Comp Plan text, fetched once
-    const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9);
+    const chunkScores = new Map();
+    const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9, chunkScores);
+    // Everything retrieved is sent to the model; only the passages that
+    // genuinely matched are listed to the reader as the basis of the answer.
+    const shownSources = citableSources(relevantChunks, chunkScores, question);
     let contextText = relevantChunks.length
       ? relevantChunks.map(c => `[${c.source} \u2014 ${c.section}${c.page ? `, page ${c.page}` : ''}]\n${c.text}`).join('\n\n---\n\n')
       : '';
@@ -2610,12 +2681,12 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
 
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/event-stream') && response.body) {
-      await consumeAnswerStream(response, relevantChunks);
+      await consumeAnswerStream(response, relevantChunks, shownSources);
     } else {
       // Non-streaming fallback, in case a proxy collapses the stream.
       const data = await response.json();
       const answer = data.answer || "I didn't get a usable response \u2014 try rephrasing the question.";
-      messages.push({ role: 'assistant', content: answer, sources: relevantChunks });
+      messages.push({ role: 'assistant', content: answer, sources: relevantChunks, shown: shownSources });
     }
   } catch (err) {
     lastError = "Couldn't reach the assistant backend (" + err.message + "). If you're running this locally, make sure the proxy server is started (npm start) and ANTHROPIC_API_KEY is set.";
@@ -2627,8 +2698,8 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
 // scroll position, so only the one bubble's contents are rewritten, and no
 // more often than every 60ms — enough to read as continuous typing without
 // re-parsing the markdown on every character.
-async function consumeAnswerStream(response, sources) {
-  const msg = { role: 'assistant', content: '', sources, streaming: true };
+async function consumeAnswerStream(response, sources, shown) {
+  const msg = { role: 'assistant', content: '', sources, shown: shown || sources, streaming: true };
   messages.push(msg);
   render();
 

@@ -174,6 +174,10 @@ CITING AS YOU GO:
 - One marker per sentence, on the sentences that carry a rule, a figure or a threshold. Do not mark every sentence, and do not stack markers.
 - Keep writing normally around the markers — they are not a bibliography, they are how the reader opens the page and sees the rule for themselves.
 
+WHEN YOUR ANSWER USES NONE OF THE MATERIAL:
+- If you decline the question as outside what you cover, or tell the reader the material does not answer it, then your answer rests on none of the passages. End that answer with [[NO_SOURCES]] as the last thing you write, on its own line. The reader never sees it — it tells the page not to list reference documents under an answer that did not use any, which would otherwise suggest the answer came from them.
+- Use it only in that case. Never add it to an answer that gives any rule, figure, requirement or section from the material, not even a partial one, and never in the middle of an answer.
+
 WHEN A THRESHOLD DECIDES THE ANSWER:
 - Say what happens on both sides of it, briefly, so the reader can see where the line is. "Three lots makes it a subdivision, so it needs plat approval [Land Development Code, p. 110]; at two lots it would be a Property Split Review at $150.00 instead." One sentence of contrast is enough — do not write out a second full answer for the case they did not ask about.`;
 
