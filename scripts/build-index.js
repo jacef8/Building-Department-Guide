@@ -11,10 +11,11 @@
 const fs = require('fs');
 const path = require('path');
 const { PDFParse } = require('pdf-parse');
+const pdfjs = require('pdfjs-dist/legacy/build/pdf.mjs');
 
 const DOCS = __dirname.replace(/\\/g, '/').replace(/\/scripts$/, '') + '/public/docs';
 const OUT = DOCS + '/reference-index.json';
-const PZ = 'S:/BOCC/County Departments/Building Dept/Planning & Zoning';
+const PZ = 'S:/BOCC/County Departments/Building Department/Planning and Zoning';
 
 // The department's own documents are indexed from the PDFs this app already
 // serves, so a passage can never drift from the file a reader opens. The code
@@ -49,6 +50,9 @@ const isFurniture = (l) =>
   /^Liberty County Board of County Commissioners/i.test(l) ||
   /\.{6,}\s*\d+\s*$/.test(l);            // table-of-contents dot leaders
 
+// ALL-CAPS titles, kept separate because a repeated one is page furniture
+const ALLCAPS = /^([A-Z][A-Z &,'\-/]{8,70})$/;
+
 // heading styles used across these two documents
 const HEADING = [
   /^(Chapter\s+\d+[A-Za-z]?\b.*)$/i,
@@ -57,7 +61,7 @@ const HEADING = [
   /^(Sec\.\s*\d+[\d.\-]*.*)$/i,
   /^((?:GOAL|OBJECTIVE|POLICY)\s+[\d.]+.*)$/i,
   /^(\d+\.\d+(?:\.\d+)*\s+[A-Z][^.]{4,80})$/,
-  /^([A-Z][A-Z &,'\-/]{8,70})$/,          // ALL CAPS element/section titles
+  ALLCAPS,                                // ALL CAPS element/section titles
   // the department's own documents: "I. New construction", "Part 1b — …",
   // "Step 3: …", "1. Property and owner", "Fee Assessment"
   /^([IVXLC]{1,5}\.\s+[A-Z][^.]{3,70})$/,
@@ -66,11 +70,87 @@ const HEADING = [
   /^(\d{1,2}\.\s+[A-Z][^.]{3,60})$/,
   /^((?:Fee Assessment|Permit Coverage|Intake Rules|Fee Modifiers|Additional Permit Rules|Documented Inspections|Inspection Fees)\b.*)$/i,
 ];
-function headingOf(line) {
+function headingOf(line, big, repeated) {
   const l = line.trim();
   if (l.length > 90) return null;
-  for (const re of HEADING) { const m = l.match(re); if (m) return m[1].replace(/\s+/g, ' ').trim(); }
+  // Set in type larger than the body text — the only signal available in the
+  // department's own one-pagers, whose headings are ordinary sentences
+  // ("Exempt — no permit needed") that no pattern can tell from body text.
+  // A wrapped body line can key-match a heading once punctuation is stripped
+  // ("electrical)" against the heading "Electrical"), so the line still has to
+  // read like a heading, and the heading's own wording is what gets stored.
+  if (big && /^[A-Z0-9]/.test(l) && !/[,;)]$/.test(l)) {
+    const canonical = big.get(headingKey(l));
+    if (canonical) return canonical;
+  }
+  for (const re of HEADING) {
+    const m = l.match(re);
+    if (m) {
+      const h = m[1].replace(/\s+/g, ' ').trim();
+      // An ALL-CAPS "heading" that fires over and over is a table column label
+      // or a running page header, not a heading. The 2026 Eligibility Guide is
+      // laid out as a table, and its column labels — CONTRACTOR, LICENSED
+      // CONTRACTOR, OWNER MAY PULL & DO THE — were being read as the titles of
+      // 37 of its 39 passages, which let that one guide crowd into answers it
+      // had nothing to do with. Only ALL-CAPS matches are tested this way: a
+      // numbered subheading like "3. Density" legitimately recurs under every
+      // land use district in the Code.
+      if (re === ALLCAPS && repeated && repeated.has(h)) return null;
+      return h;
+    }
+  }
   return null;
+}
+
+// comparison key: the two extractors disagree about spacing around dashes
+const headingKey = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+// the type extractor runs words together across a dash: "Exempt—no permit needed"
+const tidyHeading = (s) => s.replace(/\s+/g, ' ').replace(/\s*—\s*/g, ' — ').trim();
+
+// Lines set larger than the document's body text. Body size is the size most
+// of the characters are set in, so this does not depend on knowing the
+// document's design. The Code and the Plan set their headings bold at body
+// size and are unaffected — they keep matching by pattern, as before.
+async function bigHeadings(file) {
+  const found = new Map();   // comparison key -> the heading as written
+  try {
+    const doc = await pdfjs.getDocument({
+      data: new Uint8Array(fs.readFileSync(file)), useSystemFonts: true,
+    }).promise;
+    const weight = new Map();      // type size -> characters set in it
+    const lines = [];
+    for (let p = 1; p <= doc.numPages; p++) {
+      const page = await doc.getPage(p);
+      const content = await page.getTextContent();
+      const byRow = new Map();     // same baseline = same line
+      for (const item of content.items) {
+        if (!item.str.trim()) continue;
+        const row = Math.round(item.transform[5]);
+        const size = Math.round((Math.abs(item.transform[0]) || item.height) * 2) / 2;
+        if (!byRow.has(row)) byRow.set(row, { size: 0, text: '' });
+        const line = byRow.get(row);
+        line.text += item.str;
+        if (size > line.size) line.size = size;
+        weight.set(size, (weight.get(size) || 0) + item.str.length);
+      }
+      byRow.forEach(line => lines.push(line));
+    }
+    await doc.destroy();
+    const body = [...weight.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    let biggest = 0;
+    for (const line of lines) {
+      const t = line.text.trim();
+      if (line.size >= body + 0.5 && t.length > 2 && t.length <= 90) {
+        const key = headingKey(t);
+        if (!found.has(key)) found.set(key, tidyHeading(t));
+        if (line.size > biggest) { biggest = line.size; found.title = tidyHeading(t); }
+      }
+    }
+  } catch (err) {
+    console.log('  (type-size pass unavailable: ' + err.message + ')');
+    return new Map();
+  }
+  return found;
 }
 
 function tidy(s) {
@@ -80,13 +160,33 @@ function tidy(s) {
 (async () => {
   const out = [];
   for (const src of SOURCES) {
-    if (!fs.existsSync(src.file)) { console.log('MISSING: ' + src.file); continue; }
+    // Skipping a missing file used to be a printed note, which is how a
+    // renamed folder could silently cost the index the Code and the Plan.
+    if (!fs.existsSync(src.file)) {
+      console.error('MISSING SOURCE: ' + src.file + '\n  The index would be built without it. Fix the path and run again.');
+      process.exit(1);
+    }
     const parser = new PDFParse({ data: fs.readFileSync(src.file) });
     const res = await parser.getText();
     await parser.destroy();
 
     const lines = res.text.split(/\r?\n/);
-    let page = 1, heading = '(front matter)', buf = '', bufPage = 1, bufHeading = heading, made = 0;
+
+    const big = await bigHeadings(src.file);
+    // first pass: which heading patterns fire so often they must be furniture
+    const hits = new Map();
+    for (const raw of lines) {
+      if (isFurniture(raw)) continue;
+      const m = raw.trim().length <= 90 && raw.trim().match(ALLCAPS);
+      if (m) { const h = m[1].replace(/\s+/g, ' ').trim(); hits.set(h, (hits.get(h) || 0) + 1); }
+    }
+    const repeated = new Set([...hits].filter(([, n]) => n > 3).map(([h]) => h));
+    if (repeated.size) console.log(`  ignoring repeated table labels: ${[...repeated].join(', ')}`);
+
+    // Material above the first heading is filed under the document's title
+    // rather than "(front matter)", which named nothing and matched nothing.
+    const opening = big.title || '(front matter)';
+    let page = 1, heading = opening, buf = '', bufPage = 1, bufHeading = heading, made = 0;
 
     const flush = () => {
       const text = tidy(buf);
@@ -104,7 +204,7 @@ function tidy(s) {
       const pm = raw.match(/^-- (\d+) of \d+ --$/);
       if (pm) { page = Number(pm[1]) + 1; continue; }
       if (isFurniture(raw)) continue;
-      const h = headingOf(raw);
+      const h = headingOf(raw, big, repeated);
       if (h) {
         flush();
         heading = h; bufHeading = h; bufPage = page;
@@ -125,6 +225,19 @@ function tidy(s) {
     flush();
     console.log(`${src.source}: ${made} passages from ${res.pages ? res.pages.length : '?'} pages`);
   }
+
+  // The same passage reaching the index twice wastes one of the nine slots a
+  // question gets, and the reader sees the same citation listed twice.
+  const seen = new Set();
+  const unique = out.filter(c => {
+    const key = c.source + '|' + c.text;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (unique.length !== out.length) console.log(`\ndropped ${out.length - unique.length} duplicate passages`);
+  out.length = 0;
+  out.push(...unique);
 
   out.forEach((c, i) => c.id = 'ref' + (i + 1));
   fs.writeFileSync(OUT, JSON.stringify(out));
