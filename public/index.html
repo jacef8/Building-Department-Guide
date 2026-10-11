@@ -93,7 +93,7 @@ textarea,input,select{font:inherit}
 .badge{margin-left:auto;display:inline-flex;align-items:center;min-height:32px;padding:0 12px;
   border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);
   font-size:12.5px;font-weight:700;white-space:nowrap}
-.tools-toggle,.parcelbar{display:none}
+.tools-toggle,.parcelbar,.new-btn{display:none}
 
 /* ── notices ────────────────────────────────────────────────────── */
 .disclaimer{border-radius:var(--r-s);padding:9px 14px;font-size:13.5px;line-height:1.45;
@@ -297,13 +297,22 @@ textarea,input,select{font:inherit}
 /* ══ phones: ALL phone rules live here, after the base rules ══════ */
 @media(max-width:779px){
   #app{height:100dvh;grid-template-rows:auto minmax(0,1fr);padding:8px;gap:8px}
-  .header{padding:9px 12px}
-  .header h1{font-size:17px}
+  .header{padding:9px 11px;gap:8px}
+  .header h1{font-size:16px;letter-spacing:-.015em}
+  .bell{width:30px;height:30px}
+  .bell svg{width:19px;height:19px}
   .eyebrow,.badge{display:none}
-  .tools-toggle{display:inline-flex;align-items:center;justify-content:center;margin-left:auto;
+  .tools-toggle{display:inline-flex;align-items:center;justify-content:center;
     min-width:44px;min-height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.34);
     background:transparent;color:#fff}
   .tools-toggle svg{width:21px;height:21px}
+  /* Starting over is one of the two things anyone does most often here, so it
+     sits on the screen rather than inside the drawer. */
+  .new-btn{display:inline-flex;align-items:center;gap:5px;margin-left:auto;min-height:44px;
+    padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.34);
+    background:rgba(255,255,255,.14);color:#fff;font-size:14px;font-weight:800}
+  .new-btn svg{width:17px;height:17px}
+  .titles{flex:1;min-width:0}
   .disclaimer .long{display:none}
   .disclaimer .short{display:inline}
 
@@ -1858,6 +1867,12 @@ function render() {
         <h1>Permit Assistant</h1>
       </div>
       <div class="badge">${IS_STAFF ? 'Staff mode' : `Informational · ${uniqueSources.length} sources`}</div>
+      ${messages.length ? `
+        <button class="new-btn" onclick="newConversation()" title="Start a new question" aria-label="Start a new question">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New</span>
+        </button>
+      ` : ''}
       <button class="tools-toggle ${toolsOpen ? 'open' : ''}" onclick="toggleTools(event)" aria-label="Sources, history and parcel lookup" aria-expanded="${toolsOpen ? 'true' : 'false'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </div>
 

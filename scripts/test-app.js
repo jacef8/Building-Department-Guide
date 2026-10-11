@@ -80,9 +80,22 @@ for (const sel of ['.main', '.header', '.disclaimer'])
 // A flex item will not shrink below its own min-content width unless told to,
 // and a citation chip set to nowrap has a min-content width of its whole
 // label — which is what pushed the page sideways on a phone.
+// Every rule that targets this selector, run together. Taking only the first
+// one is wrong: ".new-btn" appears first in a shared display:none rule, so a
+// check for its real properties looked at the wrong declaration and failed.
 const ruleBody = (sel) => {
-  const at = css.indexOf(sel + '{');
-  return at === -1 ? '' : css.slice(at, css.indexOf('}', at));
+  let out = '', from = 0;
+  for (;;) {
+    const at = css.indexOf(sel, from);
+    if (at === -1) return out;
+    from = at + sel.length;
+    const rest = css.slice(from);
+    // the selector must end here — at the brace, or at a comma in a list
+    const m = rest.match(/^\s*[,{]/);
+    if (!m) continue;
+    const open = css.indexOf('{', at);
+    if (open !== -1) out += css.slice(open, css.indexOf('}', open)) + ' ';
+  }
 };
 for (const rule of ['.citation-tag', '.sources-used', '.msg.assistant .bubble'])
   ok(ruleBody(rule).includes('min-width:0'),
@@ -90,6 +103,18 @@ for (const rule of ['.citation-tag', '.sources-used', '.msg.assistant .bubble'])
 ok(ruleBody('.msg.assistant .bubble').includes('overflow-wrap:anywhere'),
    'a long word in an answer can still push the page sideways');
 ok(ruleBody('.chat').includes('overflow-x:hidden'), 'the answer column can scroll sideways');
+
+// Starting a fresh question was only reachable from inside the drawer on a
+// phone, where nobody found it. It has to be on the screen.
+ok(/class="new-btn" onclick="newConversation\(\)"/.test(html), 'the phone has no visible New button');
+ok(ruleBody('.tools-toggle,.parcelbar,.new-btn').includes('display:none'),
+   'the New button should be hidden on desktop, where the rail carries it');
+ok(css.lastIndexOf('.new-btn{display:inline-flex') > phoneBlock, 'the New button is never shown on a phone');
+
+// directive 2.4: nothing you tap is under 44px
+for (const rule of ['.new-btn', '.tools-toggle', '.parcelbar'])
+  ok(/min-(height|width):44px/.test(ruleBody(rule)) || /min-height:4[4-9]px|min-height:[5-9]\dpx/.test(ruleBody(rule)),
+     `${rule} is under the 44px tap target`);
 
 // directive 2.1: no glow or haze anywhere
 ok(!/text-shadow/.test(css), 'text-shadow is on the rejected list');
