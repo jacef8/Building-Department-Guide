@@ -298,7 +298,27 @@ textarea,input,select{font:inherit}
 
 /* ══ phones: ALL phone rules live here, after the base rules ══════ */
 @media(max-width:779px){
-  #app{height:100dvh;grid-template-rows:auto minmax(0,1fr);padding:8px;gap:8px}
+  /* svh, not dvh: dvh follows Chrome's address bar as it retracts, so the
+     shell can be taller than what is on screen and the page ends up scrolled.
+     svh is the viewport with the bar showing — the smallest it ever is — so
+     this fits whatever the bar is doing. dvh stays as the fallback for
+     browsers without svh. */
+  #app{height:100dvh;height:100svh;grid-template-rows:auto minmax(0,1fr);padding:8px;gap:8px;
+    padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+  /* the answer column scrolls; the page never does */
+  html,body{overflow:hidden;overscroll-behavior:none}
+
+  /* The opening screen filled a third of the column and left the rest empty.
+     Centre it, and use the room on a taller phone for the other two
+     suggestions rather than leaving a hole. */
+  /* Fill the column rather than leaving a hole above the ask box: the
+     suggestions spread down the space that is there instead of bunching at
+     the top. They stay full-width rows, so every one is easy to hit. */
+  .chat-empty{display:flex;flex-direction:column}
+  .chat-empty .empty-state{flex:1;display:flex;flex-direction:column;min-height:0}
+  .chat-empty .suggestion-row{flex:1;flex-direction:column;justify-content:space-evenly;
+    flex-wrap:nowrap;gap:8px;margin-top:4px}
+  .chat-empty .suggestion-chip{width:100%}
   .header{padding:9px 11px;gap:8px}
   .header h1{font-size:16px;letter-spacing:-.015em}
   .bell{width:30px;height:30px}
@@ -358,6 +378,11 @@ textarea,input,select{font:inherit}
   .empty-state h2{font-size:19px}
   .suggestion-chip{font-size:13.5px}
   .stage canvas{height:290px}
+}
+/* A tall phone has room for all six suggestions; a short one does not. After
+   the phone block, so it wins on source order. */
+@media(max-width:779px) and (min-height:780px){
+  .suggestion-row .suggestion-chip:nth-child(n+5){display:inline-flex}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -1963,7 +1988,7 @@ function render() {
           <span class="go">${activeParcel.acres > 0 ? 'Site diagram' : 'Parcel'} ›</span>
         </button>
       ` : ''}
-      <div class="chat" id="chatArea">
+      <div class="chat${messages.length === 0 ? ' chat-empty' : ''}" id="chatArea">
         ${messages.length === 0 ? `
           <div class="empty-state">
             <div class="icon"></div>

@@ -71,7 +71,9 @@ for (const cls of ['header', 'rail', 'main', 'detail', 'chat', 'input-bar', 'msg
   ok(css.includes('.' + cls), `no style for .${cls}, which the markup uses`);
 
 // directive 2.3: a phone rule that loses on source order silently does nothing
-const phoneBlock = css.lastIndexOf('@media(max-width:779px)');
+// The FIRST phone media query. There is a second one further down for tall
+// phones, and taking the last match pointed these checks at that instead.
+const phoneBlock = css.indexOf('@media(max-width:779px)');
 for (const sel of ['.main', '.header', '.disclaimer'])
   ok(css.indexOf(sel + '{') < phoneBlock,
      `the base rule for ${sel} must come before the phone block`);
