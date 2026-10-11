@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Permit Assistant — proposed layout</title>
+<!--
+  ONE SCREEN, for the "keep going with this look?" decision. Not wired to the
+  API; the answer and the parcel are real content from the knowledge base and
+  the tax roll so the layout is judged against what it will actually hold.
+
+  Style: Work tool (directive 3.2) — county app, used at a counter all day.
+  Who: Building Department staff with an applicant standing there.
+  Where: desk at the counter; a phone away from the office.
+  The one thing: a correct answer with the source they can show the applicant.
+
+  What changed from the current build, beyond paint (directive 1, anti-reskin):
+    - biggest/first: the answer, in a column of its own that scrolls by itself.
+      Today it is a chat log the whole page scrolls through.
+    - the four tray buttons became a rail beside the answer, not a row above it.
+    - the citation list moved out of the answer into its own column, so sources
+      stop pushing the answer down the screen.
+    - added: the site diagram, which the tool could not show at all before.
+    - cut: the second disclaimer line, the repeated badge, the footer notice.
+-->
+<style>
+:root{
+  color-scheme:light;
+  --bg:#F2F1EC;           /* page */
+  --surface:#FFFFFF;      /* cards */
+  --surface-2:#EBE9E2;    /* inputs, wells, stripes */
+  --line:#D8D4C8;
+  --ink:#16140F;          /* body, ~17:1 on white */
+  --ink-2:#44403A;        /* secondary, ~9:1 */
+  --ink-3:#625C53;        /* labels, ~6:1 */
+  --accent:#751D2C;       /* county maroon (letterhead PANTONE 188 C) */
+  --accent-2:#8C3444;     /* header maroon */
+  --gold:#C1B572;         /* rules only, never text */
+  --tint:#F6F3E7;
+  --ok:#137A3F; --bad:#C62828;
+  --r:16px; --r-s:12px;
+  --raise:0 1px 2px rgba(0,0,0,.08),0 4px 10px -6px rgba(0,0,0,.18);
+  --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);
+  font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+h1,h2,h3{margin:0;line-height:1.25}
+button{font:inherit;cursor:pointer}
+textarea,input{font:inherit}
+:where(a,button,input,textarea,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.num{font-variant-numeric:tabular-nums}
+
+/* ── shell: one screen, each column scrolls on its own ───────────── */
+.app{height:100dvh;display:grid;gap:10px;padding:10px;
+  grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+.app>*{min-height:0}
+.rail,.main,.detail{overflow:auto}
+@media(min-width:1180px){
+  .app{grid-template-columns:260px minmax(0,1fr) 380px}
+  .bar{grid-column:1/-1}
+}
+@media(min-width:760px) and (max-width:1179px){
+  .app{grid-template-columns:230px minmax(0,1fr)}
+  .bar{grid-column:1/-1}
+  .app>.detail{display:none}
+}
+
+/* ── top bar ──────────────────────────────────────────────────────── */
+.bar{display:flex;align-items:center;gap:12px;background:var(--accent);
+  border-radius:var(--r);padding:10px 14px;color:#fff}
+.bar .mark{width:34px;height:34px;border-radius:9px;background:var(--gold);flex:none;
+  display:grid;place-items:center}
+.bar .mark svg{width:22px;height:22px;display:block}
+.bar .who{display:flex;flex-direction:column;min-width:0}
+.bar .eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:rgba(255,255,255,.82);font-weight:700}
+.bar h1{font-size:18px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 12px;border-radius:999px;
+  background:rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.26)}
+.chip{white-space:nowrap}
+.chip b{font-weight:800}
+.bar .ghost{min-height:38px;padding:0 13px;border-radius:10px;border:1px solid rgba(255,255,255,.34);
+  background:transparent;color:#fff;font-weight:700;font-size:13px}
+.bar .ghost:hover{background:rgba(255,255,255,.12)}
+.menu-btn{display:none}
+.parcelbar{display:none}
+@media(max-width:759px){
+  .menu-btn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;
+    border-radius:10px;border:1px solid rgba(255,255,255,.34);background:transparent;color:#fff;font-size:18px}
+  .bar h1{font-size:17px}
+  .bar .eyebrow{display:none}
+  .bar .chip,.bar .ghost{display:none}
+  .parcelbar{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 12px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);
+    color:var(--ink);font-size:14px;font-weight:700;text-align:left}
+  .parcelbar .n{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .parcelbar .go{margin-left:auto;color:var(--accent);font-weight:800;white-space:nowrap}
+}
+
+/* ── rail ─────────────────────────────────────────────────────────── */
+.rail{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--raise)}
+.card>h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:800;padding:12px 14px 0}
+.card>.body{padding:10px 14px 14px}
+.rail .act{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:0 12px;
+  border-radius:var(--r-s);border:1px solid var(--line);background:var(--surface);
+  color:var(--ink);font-weight:700;font-size:14px;text-align:left;margin-top:8px}
+.rail .act:first-child{margin-top:0}
+.rail .act:hover{background:var(--surface-2)}
+.rail .act[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.rail .act .ic{width:20px;height:20px;flex:none;color:var(--accent-2)}
+.rail .act[aria-pressed="true"] .ic{color:#fff}
+.rail .act .n{margin-left:auto;font-size:12px;font-weight:800;color:var(--ink-3);
+  background:var(--surface-2);border-radius:999px;padding:2px 8px}
+.recent{list-style:none;margin:0;padding:0}
+.recent li+li{border-top:1px solid var(--line)}
+.recent button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 2px;
+  font-size:14px;color:var(--ink-2);line-height:1.35}
+.recent button:hover{color:var(--accent)}
+.recent .when{display:block;font-size:12px;color:var(--ink-3);margin-top:2px}
+
+/* ── main: the answer ─────────────────────────────────────────────── */
+.main{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px}
+.thread{overflow:auto;padding-right:2px}
+.asked{display:flex;justify-content:flex-end;margin:0 0 10px}
+.asked span{background:var(--accent);color:#fff;border-radius:14px 14px 4px 14px;
+  padding:9px 14px;font-weight:650;max-width:min(560px,86%)}
+.answer{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--raise);padding:18px 20px}
+.answer h3{font-size:17px;font-weight:800;margin:0 0 4px}
+.answer p{margin:0 0 12px;font-size:16px}
+.answer p:last-child{margin-bottom:0}
+.answer .lede{font-size:17px;font-weight:650}
+.cite{display:inline-block;font-size:13px;font-weight:700;color:var(--accent);
+  text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px;white-space:nowrap}
+.flag{display:flex;gap:11px;background:var(--tint);border-left:4px solid var(--gold);
+  border-radius:0 var(--r-s) var(--r-s) 0;padding:12px 14px;margin:14px 0 0}
+.flag .t{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--accent);
+  display:block;margin-bottom:3px}
+.flag p{font-size:15px;margin:0}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:14px 0 0}
+.fig{background:var(--surface-2);border-radius:var(--r-s);padding:9px 11px}
+.fig b{display:block;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.fig span{display:block;font-size:12px;color:var(--ink-3);font-weight:700;margin-top:1px}
+
+/* ── ask box, in thumb reach ──────────────────────────────────────── */
+.ask{display:flex;gap:8px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);box-shadow:var(--raise);padding:9px}
+.ask textarea{flex:1;min-height:46px;max-height:120px;resize:none;border:1px solid var(--line);
+  border-radius:var(--r-s);background:var(--surface-2);color:var(--ink);padding:12px 13px;font-size:16px}
+.ask .clip{width:46px;height:46px;flex:none;border-radius:var(--r-s);border:1px solid var(--line);
+  background:var(--surface);display:grid;place-items:center;color:var(--accent)}
+.ask .clip svg{width:21px;height:21px}
+.ask .go{min-height:46px;padding:0 20px;border:0;border-radius:var(--r-s);background:var(--accent);
+  color:#fff;font-weight:800;font-size:15px}
+.ask .go:hover{background:var(--accent-2)}
+
+/* ── detail column ────────────────────────────────────────────────── */
+.detail{display:flex;flex-direction:column;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:14px}
+.kv dt{color:var(--ink-3);font-weight:700}
+.kv dd{margin:0;font-weight:650;text-align:right}
+.stage{position:relative;background:var(--tint);border-radius:var(--r-s);overflow:hidden;
+  border:1px solid var(--line)}
+.stage canvas{display:block;width:100%;height:330px;touch-action:none}
+.stage .hint{position:absolute;left:9px;bottom:8px;background:rgba(255,255,255,.94);border:1px solid var(--line);
+  border-radius:8px;padding:3px 8px;font-size:12px;font-weight:700;color:var(--ink-2)}
+.legend{display:flex;flex-wrap:wrap;gap:10px 14px;margin-top:10px;font-size:13px;font-weight:700;color:var(--ink-2)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.srcs{display:flex;flex-direction:column;gap:6px}
+.srcs a{display:block;border:1px solid var(--line);border-radius:10px;padding:8px 11px;
+  font-size:13px;font-weight:700;color:var(--accent);text-decoration:none;background:var(--surface)}
+.srcs a:hover{background:var(--tint)}
+.srcs a span{display:block;font-weight:600;color:var(--ink-3);font-size:12px;margin-top:1px}
+.note{font-size:13px;color:var(--ink-3);margin:8px 0 0}
+
+/* ── phone: rail becomes a drawer ─────────────────────────────────── */
+@media(max-width:759px){
+  .app{height:100dvh;grid-template-rows:auto minmax(0,1fr)}
+  /* Flex, not grid, for the three stacked pieces: as a grid the first track
+     collapsed to 0 and the parcel strip sat on top of the answer. Flex sizes
+     the strip and the ask box to their content and gives the rest to the
+     answer. This block has to stay AFTER the base .main rule or it loses on
+     source order — directive 2.3. */
+  .main{display:flex;flex-direction:column;gap:10px}
+  .main>.parcelbar{flex:none}
+  .main>.thread{flex:1 1 auto;min-height:0}
+  .main>.ask{flex:none}
+  .app>.rail{position:fixed;z-index:40;top:0;right:0;bottom:0;width:min(340px,88vw);
+    background:var(--surface);border-radius:var(--r) 0 0 var(--r);padding:12px;overflow:auto;
+    transform:translateX(105%);transition:transform .22s ease;box-shadow:-10px 0 24px -14px rgba(0,0,0,.5)}
+  .app>.rail.open{transform:none}
+  .app>.detail{display:none}
+  .app>.detail.open{display:flex;position:fixed;z-index:40;inset:auto 0 0 0;max-height:82dvh;
+    background:var(--surface);border-radius:var(--r) var(--r) 0 0;padding:12px;overflow:auto}
+  .scrim{position:fixed;inset:0;z-index:39;background:rgba(0,0,0,.55)}
+  .answer{padding:15px 16px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="bar">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="#751D2C"><polygon points="50,22 22,40 78,40"/>
+        <rect x="25" y="43" width="50" height="5"/><rect x="28" y="51" width="7" height="21"/>
+        <rect x="41" y="51" width="7" height="21"/><rect x="54" y="51" width="7" height="21"/>
+        <rect x="67" y="51" width="7" height="21"/><rect x="22" y="75" width="56" height="6"/></svg>
+    </div>
+    <div class="who">
+      <span class="eyebrow">Liberty County Building Dept</span>
+      <h1>Permit Assistant</h1>
+    </div>
+    <div class="spacer"></div>
+    <span class="chip" id="parcelChip">Parcel <b class="num">01-1S-4W-0004-4001</b></span>
+    <button class="ghost" id="siteBtn">Site diagram</button>
+    <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">☰</button>
+  </header>
+
+  <aside class="rail" id="rail">
+    <div class="card"><div class="body">
+      <button class="act" aria-pressed="false">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h7v15H4zM13 5h7v15h-7z"/></svg>
+        Knowledge base <span class="n num">10</span></button>
+      <button class="act" aria-pressed="false">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        History <span class="n num">9</span></button>
+      <button class="act" aria-pressed="true">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-5-2V5l5 2 6-2 5 2v13l-5-2-6 2z"/><path d="M9 7v13M15 5v13"/></svg>
+        Look up a parcel</button>
+      <button class="act" aria-pressed="false">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        New question</button>
+    </div></div>
+
+    <div class="card">
+      <h2>Earlier today</h2>
+      <div class="body"><ul class="recent">
+        <li><button>How much is a porch permit?<span class="when">9:12 am</span></button></li>
+        <li><button>Does a 100 sq ft shed need a permit?<span class="when">8:47 am</span></button></li>
+        <li><button>Can this parcel be split into 3 lots?<span class="when">Yesterday</span></button></li>
+      </ul></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <button class="parcelbar" id="parcelBar" type="button">
+      <span class="n num">01-1S-4W-0004-4001</span>
+      <span class="go">Site diagram ›</span>
+    </button>
+    <div class="thread" id="thread">
+      <div class="asked"><span>What are the setbacks on this parcel, and can they build near the well?</span></div>
+
+      <article class="answer">
+        <h3>Setbacks are 20 feet on every side</h3>
+        <p class="lede">On Residential (Low Density) this parcel has a 20 ft front, 20 ft side and 20 ft rear
+          setback <a class="cite" href="#">Building Guide, p. 1</a>. On a square one-acre lot that leaves a
+          buildable area of about 28,500 sq ft — roughly two thirds of the lot.</p>
+
+        <div class="figs">
+          <div class="fig"><b class="num">1.00</b><span>acres on the roll</span></div>
+          <div class="fig"><b class="num">209 ft</b><span>each side, if square</span></div>
+          <div class="fig"><b class="num">28,500</b><span>sq ft buildable</span></div>
+          <div class="fig"><b class="num">816</b><span>sq ft house now</span></div>
+        </div>
+
+        <p style="margin-top:14px">The well is the harder half of the question. The Land Development Code puts a
+          200-foot zone of exclusion around a potable water supply well, but writes in "(but not individual
+          private wells)" <a class="cite" href="#">Land Development Code, p. 112</a>. A 200-foot radius covers
+          2.9 acres — almost three times this whole parcel — so on a lot this size the rule either does nothing
+          or it stops everything, with no middle ground.</p>
+
+        <div class="flag">
+          <div>
+            <span class="t">Say this carefully at the counter</span>
+            <p>The Comprehensive Plan's Policy 1-5 states the same 200-foot exclusion <em>without</em> the
+              private-well carve-out, and where the two disagree the Plan controls. Read literally it would stop
+              an owner building within 200 feet of their own well. That is on the county's list of amendments to
+              make. Until it is fixed, apply the Code — private wells are not subject to the exclusion — and tell
+              the applicant the Plan language is being corrected.</p>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <form class="ask" onsubmit="return false">
+      <button class="clip" type="button" aria-label="Attach a plan or photo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.4 11.1l-9.2 9.2a6 6 0 01-8.5-8.5l9.2-9.2a4 4 0 015.7 5.7l-9.2 9.2a2 2 0 01-2.8-2.9l8.5-8.5"/></svg>
+      </button>
+      <textarea placeholder="Ask a question, attach a plan, or type a parcel number, owner or road…"></textarea>
+      <button class="go" type="submit">Ask</button>
+    </form>
+  </main>
+
+  <aside class="detail" id="detail">
+    <div class="card">
+      <h2>Parcel on the counter</h2>
+      <div class="body">
+        <dl class="kv">
+          <dt>Owner</dt><dd>ROBERTS, JERRY</dd>
+          <dt>Address</dt><dd>38815 SE Buckeye Ln</dd>
+          <dt>Legal</dt><dd class="num">Sec 11-5S-4W</dd>
+          <dt>Land</dt><dd class="num">1.00 ac · 43,560 sq ft</dd>
+          <dt>Building</dt><dd class="num">816 sq ft · 1987</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Site diagram — to scale</h2>
+      <div class="body">
+        <div class="stage">
+          <canvas id="site"></canvas>
+          <span class="hint">Drag to turn · scroll to zoom</span>
+        </div>
+        <div class="legend">
+          <span><i style="background:#F6F3E7;border:1px solid #D8D4C8"></i>Lot, 1.00 ac</span>
+          <span><i style="background:#FFFFFF;border:1px solid #8C3444"></i>Buildable</span>
+          <span><i style="background:#751D2C"></i>House</span>
+          <span><i style="background:#2E6E8E"></i>200 ft well radius</span>
+        </div>
+        <p class="note">Lot drawn as a square of the acreage on the tax roll — the roll carries area, not
+          dimensions, so the shape is approximate. The 20 ft setbacks and the 200 ft radius are drawn to scale
+          against it.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Where this came from</h2>
+      <div class="body"><div class="srcs">
+        <a href="#">Building Guide — New Construction: Intake Rules<span>page 1</span></a>
+        <a href="#">Land Development Code — Sec. 6.4-4 Wellfield protection<span>pages 112–113</span></a>
+        <a href="#">Comprehensive Plan — Policy 1-5<span>page 24</span></a>
+      </div></div>
+    </div>
+  </aside>
+</div>
+
+<script type="module">
+import * as THREE from '/vendor/three.module.js';
+import Lenis from '/vendor/lenis.mjs';
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── Lenis: the answer column eases instead of jumping ─────────────
+   Work tool, so this is the whole of the motion budget — no ambient
+   animation anywhere else, and it is off entirely for anyone who asks
+   their system for reduced motion. */
+const thread = document.getElementById('thread');
+if (!reduced) {
+  const lenis = new Lenis({ wrapper: thread, content: thread.firstElementChild, duration: 0.7 });
+  const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
+  requestAnimationFrame(raf);
+}
+
+/* ── The site diagram ──────────────────────────────────────────────
+   The real job 3D is here for: "20 feet from the line" and "200 feet
+   from the well" are numbers nobody can picture. Drawn against each
+   other at one scale, the 200 ft radius visibly swallows the lot, which
+   is the whole point of the Plan-versus-Code problem in the answer.
+   Everything is in feet; one world unit is one foot. */
+const ACRE_SQFT = 43560;
+const acres = 1.00;
+const side = Math.sqrt(acres * ACRE_SQFT);   // 208.7 ft
+const setback = 20;
+const inner = side - setback * 2;
+const house = { w: 34, d: 24, h: 11 };       // 816 sq ft on the roll
+const wellRadius = 200;
+
+const canvas = document.getElementById('site');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#F6F3E7');
+
+const camera = new THREE.PerspectiveCamera(42, 1, 1, 4000);
+scene.add(new THREE.HemisphereLight('#ffffff', '#cfc9b4', 2.1));
+const sun = new THREE.DirectionalLight('#ffffff', 1.5);
+sun.position.set(-160, 260, 120);
+scene.add(sun);
+
+const plan = new THREE.Group();
+scene.add(plan);
+
+const flat = (geo, color, y, opts = {}) => {
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    color, transparent: opts.opacity !== undefined, opacity: opts.opacity ?? 1,
+    depthWrite: opts.opacity === undefined, side: THREE.DoubleSide,
+  }));
+  m.rotation.x = -Math.PI / 2; m.position.y = y;
+  plan.add(m); return m;
+};
+const outline = (w, d, color, y, width = 2) => {
+  const h = w / 2, k = d / 2;
+  const g = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-h, y, -k), new THREE.Vector3(h, y, -k),
+    new THREE.Vector3(h, y, k), new THREE.Vector3(-h, y, k), new THREE.Vector3(-h, y, -k),
+  ]);
+  plan.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color, linewidth: width })));
+};
+
+// Where the well actually is. The radius is measured from the wellhead, so it
+// has to be drawn around the well and not around the middle of the lot — on a
+// lot this small that difference decides which corners are buildable.
+const wellAt = { x: 52, z: -34 };
+
+// the radius first and lowest, so the lot reads on top of it
+const disc = flat(new THREE.CircleGeometry(wellRadius, 96), '#2E6E8E', 0.1, { opacity: 0.22 });
+disc.position.set(wellAt.x, 0.1, wellAt.z);
+const ring = new THREE.Mesh(
+  new THREE.RingGeometry(wellRadius - 1.4, wellRadius, 96),
+  new THREE.MeshBasicMaterial({ color: '#2E6E8E' }));
+ring.rotation.x = -Math.PI / 2;
+ring.position.set(wellAt.x, 0.2, wellAt.z);
+plan.add(ring);
+
+flat(new THREE.PlaneGeometry(side, side), '#EDE7D2', 0.3);        // the lot
+outline(side, side, '#8C7B3F', 0.5);
+flat(new THREE.PlaneGeometry(inner, inner), '#FFFFFF', 0.4);      // buildable
+outline(inner, inner, '#8C3444', 0.6);
+
+// a 20 ft grid so the scale is readable without a ruler
+const grid = new THREE.GridHelper(side, side / 20, '#C9C1A6', '#DCD6C2');
+grid.position.y = 0.35; plan.add(grid);
+
+// the house that is already there
+const home = new THREE.Mesh(
+  new THREE.BoxGeometry(house.w, house.h, house.d),
+  new THREE.MeshLambertMaterial({ color: '#751D2C' }));
+home.position.set(-18, house.h / 2 + 0.4, 26);
+plan.add(home);
+const roof = new THREE.Mesh(
+  new THREE.ConeGeometry(house.w * 0.78, 7, 4),
+  new THREE.MeshLambertMaterial({ color: '#5E1723' }));
+roof.position.set(home.position.x, house.h + 3.9, home.position.z);
+roof.rotation.y = Math.PI / 4;
+plan.add(roof);
+
+// the wellhead itself — a marker tall enough to find at a glance
+const well = new THREE.Mesh(
+  new THREE.CylinderGeometry(3.4, 3.4, 16, 20),
+  new THREE.MeshLambertMaterial({ color: '#2E6E8E' }));
+well.position.set(wellAt.x, 8, wellAt.z);
+plan.add(well);
+const cap = new THREE.Mesh(
+  new THREE.SphereGeometry(5, 18, 14),
+  new THREE.MeshLambertMaterial({ color: '#1F4F68' }));
+cap.position.set(wellAt.x, 17, wellAt.z);
+plan.add(cap);
+
+/* Orbit by hand rather than vendoring the addon: two angles and a radius is
+   all this needs, and it keeps the page to the two libraries already here. */
+let yaw = -0.62, pitch = 0.92, dist = 500;
+const target = new THREE.Vector3(0, 0, 0);
+function place() {
+  camera.position.set(
+    target.x + dist * Math.sin(pitch) * Math.sin(yaw),
+    target.y + dist * Math.cos(pitch),
+    target.z + dist * Math.sin(pitch) * Math.cos(yaw));
+  camera.lookAt(target);
+}
+let dragging = false, lastX = 0, lastY = 0;
+canvas.addEventListener('pointerdown', (e) => {
+  dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointerup', (e) => { dragging = false; canvas.releasePointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  yaw -= (e.clientX - lastX) * 0.006;
+  pitch = Math.min(1.45, Math.max(0.22, pitch - (e.clientY - lastY) * 0.005));
+  lastX = e.clientX; lastY = e.clientY; place(); draw();
+});
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  dist = Math.min(900, Math.max(180, dist + e.deltaY * 0.6));
+  place(); draw();
+}, { passive: false });
+
+function draw() { renderer.render(scene, camera); }
+function size() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  place(); draw();
+}
+new ResizeObserver(size).observe(canvas);
+size();
+
+/* ── phone drawer ──────────────────────────────────────────────────── */
+const rail = document.getElementById('rail');
+const detail = document.getElementById('detail');
+let scrim = null;
+function closePanels() {
+  rail.classList.remove('open'); detail.classList.remove('open');
+  document.getElementById('menuBtn').setAttribute('aria-expanded', 'false');
+  if (scrim) { scrim.remove(); scrim = null; }
+}
+function openPanel(el) {
+  closePanels();
+  el.classList.add('open');
+  scrim = document.createElement('div');
+  scrim.className = 'scrim';
+  scrim.onclick = closePanels;
+  document.body.appendChild(scrim);
+  if (el === detail) size();
+}
+document.getElementById('menuBtn').onclick = () => {
+  const open = rail.classList.contains('open');
+  if (open) closePanels(); else { openPanel(rail); document.getElementById('menuBtn').setAttribute('aria-expanded', 'true'); }
+};
+document.getElementById('parcelBar').onclick = () => openPanel(detail);
+document.getElementById('siteBtn').onclick = () => {
+  if (innerWidth <= 759) openPanel(detail);
+  else document.querySelector('.stage').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+};
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closePanels(); });
+</script>
+</body>
+</html>
