@@ -76,6 +76,21 @@ for (const sel of ['.main', '.header', '.disclaimer'])
   ok(css.indexOf(sel + '{') < phoneBlock,
      `the base rule for ${sel} must come before the phone block`);
 
+// the flexbox floor that let a long citation push the page sideways on a phone
+// A flex item will not shrink below its own min-content width unless told to,
+// and a citation chip set to nowrap has a min-content width of its whole
+// label — which is what pushed the page sideways on a phone.
+const ruleBody = (sel) => {
+  const at = css.indexOf(sel + '{');
+  return at === -1 ? '' : css.slice(at, css.indexOf('}', at));
+};
+for (const rule of ['.citation-tag', '.sources-used', '.msg.assistant .bubble'])
+  ok(ruleBody(rule).includes('min-width:0'),
+     `${rule} needs min-width:0 or a long label scrolls the page sideways`);
+ok(ruleBody('.msg.assistant .bubble').includes('overflow-wrap:anywhere'),
+   'a long word in an answer can still push the page sideways');
+ok(ruleBody('.chat').includes('overflow-x:hidden'), 'the answer column can scroll sideways');
+
 // directive 2.1: no glow or haze anywhere
 ok(!/text-shadow/.test(css), 'text-shadow is on the rejected list');
 ok(!/backdrop-filter/.test(css), 'backdrop-filter is on the rejected list');
@@ -101,6 +116,27 @@ for (const [q, re, label] of KNOWN) {
   const h = hits('how do i know if i need a permit');
   ok(h.chunks.some(c => /Do I need a permit/i.test(c.section || '')),
      'the "Do I need a permit?" entry no longer ranks');
+}
+
+// ── 2b. setbacks, asked the way staff ask ───────────────────────────
+// Reported from the counter: "where can they put a barn" came back saying the
+// distances were not in the material. They are — Schedule 1.0 of the Code —
+// and the entry holding them was right; the question just never reached it.
+for (const q of ['where can they put a barn on their property',
+                 'what are the setbacks for an accessory building',
+                 'how far from the property line does a barn have to be',
+                 'how close to the line can he build a shed',
+                 'what is the side yard setback',
+                 'where can I put a garage',
+                 'how far back from the road does the house have to sit']) {
+  const h = hits(q);
+  ok(/Side 5 ft|Side Yard Building/i.test(h.text), `"${q}" does not reach the setback table`);
+  ok(h.shown.length > 0, `"${q}" lost its citations`);
+}
+// the Code governs where it and the Guide disagree, and the answer must say so
+{
+  const h = hits('what is the side yard setback');
+  ok(/Code governs|the Code governs/i.test(h.text), 'the Guide/Code side-yard conflict is no longer flagged');
 }
 
 // ── 3. citations: only what the answer used ─────────────────────────

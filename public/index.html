@@ -152,15 +152,16 @@ textarea,input,select{font:inherit}
 .rail .rail-note{font-size:12.5px;color:var(--ink-3);line-height:1.45;padding:0 2px}
 
 /* ── main column ────────────────────────────────────────────────── */
-.main{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px}
-.chat{overflow:auto;padding-right:2px}
-.msg{display:flex;gap:10px;margin:0 0 12px;align-items:flex-start}
+.main{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px;min-width:0}
+.chat{overflow-y:auto;overflow-x:hidden;padding-right:2px;min-width:0}
+.msg{display:flex;gap:10px;margin:0 0 12px;align-items:flex-start;min-width:0}
 .msg.user{justify-content:flex-end}
 .msg .avatar{display:none}
 .msg.user .bubble{background:var(--maroon);color:#fff;border-radius:14px 14px 4px 14px;
   padding:9px 14px;font-weight:650;max-width:min(620px,88%)}
 .msg.assistant .bubble{background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r);box-shadow:var(--raise);padding:17px 19px;width:100%}
+  border-radius:var(--r);box-shadow:var(--raise);padding:17px 19px;width:100%;
+  min-width:0;max-width:100%;overflow-wrap:anywhere}
 .msg.assistant .bubble p{margin:0 0 12px;font-size:16px}
 .msg.assistant .bubble p:last-child{margin-bottom:0}
 .msg.assistant .bubble h4{font-size:16px;font-weight:800;margin:16px 0 6px}
@@ -168,7 +169,9 @@ textarea,input,select{font:inherit}
 .msg.assistant .bubble ul,.msg.assistant .bubble ol{margin:0 0 12px;padding-left:22px}
 .msg.assistant .bubble li{margin:0 0 5px;font-size:16px}
 .msg.assistant .bubble strong{font-weight:800}
-.msg.assistant .bubble table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14.5px}
+.msg.assistant .bubble table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14.5px;
+  display:block;overflow-x:auto;max-width:100%}
+.msg.assistant .bubble thead,.msg.assistant .bubble tbody{display:table;width:100%}
 .msg.assistant .bubble th{background:var(--maroon-head);color:#fff;font-weight:800;font-size:13px;
   text-align:left;padding:8px 10px;border:1px solid var(--grid)}
 .msg.assistant .bubble td{padding:8px 10px;border:1px solid var(--grid)}
@@ -188,16 +191,24 @@ textarea,input,select{font:inherit}
 
 /* citations: a quiet list under the answer, never pushing it off screen */
 .sources-used{margin-top:14px;border-top:1px solid var(--line);padding-top:11px;
-  display:flex;flex-wrap:wrap;gap:6px}
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;min-width:0;max-width:100%}
 .sources-used>summary{list-style:none;font-size:12.5px;font-weight:800;color:var(--ink-3);
   cursor:pointer;width:100%;text-transform:uppercase;letter-spacing:.07em}
 .sources-used>summary::-webkit-details-marker{display:none}
 .sources-used>summary::before{content:"▸ ";display:inline-block}
 .sources-used[open]>summary::before{content:"▾ "}
 @media(min-width:1180px){.sources-used{display:none}}   /* the detail column shows them */
-.citation-tag{display:inline-block;font-size:12.5px;font-weight:700;color:var(--maroon);
-  background:var(--tint);border:1px solid var(--grid);border-radius:999px;padding:4px 10px;
-  text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* min-width:0 is the point of this rule. A flex item refuses to shrink below
+   its min-content width by default, and with white-space:nowrap that is the
+   full source name — which pushed the whole page sideways on a phone. */
+/* One source per row. As inline pills in a flex row these laid out at their
+   full label width — 681px inside a 308px column — because max-width:100% was
+   not clamping them, and the page scrolled sideways on a phone. A block row
+   cannot do that, and the label still truncates rather than wrapping. */
+.citation-tag{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;
+  font-size:12.5px;font-weight:700;color:var(--maroon);background:var(--tint);
+  border:1px solid var(--grid);border-radius:10px;padding:7px 11px;text-decoration:none;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .citation-tag:hover{background:var(--surface-2)}
 
 /* empty state */
@@ -318,7 +329,7 @@ textarea,input,select{font:inherit}
   .parcelbar{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 12px;
     background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);
     color:var(--ink);font-size:14px;font-weight:700;text-align:left;flex:none}
-  .parcelbar .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .parcelbar .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .parcelbar .go{margin-left:auto;color:var(--maroon);font-weight:800;white-space:nowrap}
 
   .msg.assistant .bubble{padding:15px 16px}
@@ -496,7 +507,7 @@ const KNOWLEDGE_BASE = [
 
   // ── Land Development Code ───────────────────────────────────────────────
   { source: "Land Development Code", section: "Schedule 1.0 — Minimum Setback & Height Standards", page: 85, text:
-    "The Land Development Code's Schedule 1.0 sets minimum building setbacks and maximum height by use type. Low Density Residential (0-6 units/acre): Front 20 ft, Side 5 ft, Rear 20 ft, max height 35 ft (no parking setback applies). Medium-High Density Residential (over 6 units/acre): Front 20 ft (parking 20 ft), Side 5 ft (parking 5 ft), Rear 20 ft (parking 10 ft), max height 45 ft. Industrial/Commercial/Office: Front 20 ft (parking 20 ft), Side 10 ft (parking 10 ft), Rear 20 ft (parking 10 ft), max height 45 ft. Corner yard setbacks match front yard setbacks in all three categories. Compare this to the Building Guide's simpler setback bullets — this Schedule 1.0 table is the authoritative, code-level source and includes the medium-high-density tier and parking setbacks the Guide doesn't break out." },
+    "The Land Development Code's Schedule 1.0 sets minimum building setbacks and maximum height by use type. Low Density Residential (0-6 units/acre): Front 20 ft, Side 5 ft, Rear 20 ft, max height 35 ft (no parking setback applies). Medium-High Density Residential (over 6 units/acre): Front 20 ft (parking 20 ft), Side 5 ft (parking 5 ft), Rear 20 ft (parking 10 ft), max height 45 ft. Industrial/Commercial/Office: Front 20 ft (parking 20 ft), Side 10 ft (parking 10 ft), Rear 20 ft (parking 10 ft), max height 45 ft. Corner yard setbacks match front yard setbacks in all three categories. Compare this to the Building Guide's simpler setback bullets — this Schedule 1.0 table is the authoritative, code-level source and includes the medium-high-density tier and parking setbacks the Guide doesn't break out. HOW FAR FROM THE PROPERTY LINE: this is the table that answers it. Someone asking where on their lot they can put a barn, a shed, a pole barn, a garage, a shop, a carport or a house — how far from the property line, how close to the line, how far back from the road — is asking for these distances. On a Low Density Residential parcel a building must sit at least 20 feet back from the front line, 20 feet from the rear line and 5 feet from each side line, and no taller than 35 feet. ACCESSORY BUILDINGS: Schedule 1.0 sets its standards by type of use, not by principal versus accessory building, and the Code gives no separate setback for an accessory building — so a barn, shed or detached garage on a low density residential parcel is held to the same 20 ft front, 5 ft side and 20 ft rear. Two things to check before quoting it: confirm which land use category the parcel is in, because the distances change between the three columns; and a road on the long-range plan for multilaning carries a larger setback of its own — the greater of 75 feet from the centerline or 25 feet from the property line. CAUTION: the Building Guide states a 20 ft side yard for Residential (Low Density) where this Code table says 5 ft. Where they disagree the Code governs, so quote 5 ft and flag the Guide for correction." },
   { source: "Land Development Code", section: "Mobile Home Park Fee", page: 88, text:
     "Mobile home PARKS (as opposed to a single mobile home set-up on an individual lot) require a separate fee at the time plans are submitted: $1,000.00 OR $25.00 per mobile home space, whichever is greater. This is distinct from — and in addition to — the standard $300.00 Mobile Home Set-Up Permit used for a single home on a single lot." },
   { source: "Land Development Code", section: "Site Plan Review — What Triggers It", page: 89, text:
@@ -822,6 +833,13 @@ const TOPIC_EXPANSIONS = [
 // to the vocabulary the documents are actually written in. It is the only
 // expansion that applies to a narrow lookup rather than a whole-project one.
 const PERMIT_NEEDED = /\b(need|needs|needed|require[sd]?|necessary)\b[^?]{0,24}\bpermit\b|\bpermit\b[^?]{0,24}\b(need|needed|required|necessary)\b|\bhow (do|would) (i|we|you) know\b[^?]{0,30}\bpermit\b|\bwhen (is|do|does)\b[^?]{0,24}\bpermit\b|\bexempt\w*\b[^?]{0,24}\bpermit\b|\bpermit\b[^?]{0,24}\bexempt\w*\b|\bwithout a permit\b|\bdo i need one\b/i;
+// "How far from the property line can the barn go" has none of the words the
+// setback table is written in, so it never reached it and the answer came back
+// saying the distances were not in the material. They are.
+const SETBACK_QUESTION = /\b(setback|set back)\b|how (far|close)\b[^?]{0,40}\b(line|road|street|right[- ]of[- ]way|neighbou?r|edge|boundary)\b|\b(property|lot) line\b|\bhow (far|close)\b[^?]{0,30}\bbuild\b|\bwhere (can|do|should)\b[^?]{0,40}\b(put|place|build|sit|go)\b|\byard (requirement|standard)/i;
+const SETBACK_TERMS = 'setback front yard side yard rear yard corner yard Schedule 1.0 minimum '
+  + 'development standards building height property line land use category';
+
 const PERMIT_SPECIFIC = /\b(fence|roof\w*|walls?|deck|porch|patio|carport|pool|spa|shed|barn|garage|tower|antenna|signs?|driveway|culvert|septic|wellhead|well|dock|seawall|solar|generator|mobile home|manufactured home|trailer|rv|camper|addition|demoli\w*|subdivi\w*|plat|split|lot|parcel|setbacks?|tiny home|adu|accessory dwelling|certificate of occupancy|site plan|rezoning|variance|special exception|conditional use)\b/i;
 const PERMIT_NEEDED_TERMS = 'exempt exemption no permit needed cosmetic non-structural 7500 declared value '
   + 'flood hazard area project splitting electrical plumbing mechanical gas structural trades '
@@ -835,18 +853,23 @@ function expandQuery(question, isGuide) {
   // painting, flooring and cabinets ARE the exemption's own examples.
   const permitTest = (PERMIT_NEEDED.test(question) && !PERMIT_SPECIFIC.test(question))
     ? ' ' + PERMIT_NEEDED_TERMS : '';
+  // A wellhead "setback" is a radius around a well, not a yard off a lot
+  // line, and it has its own entry — widening it with yard vocabulary buried
+  // that entry and the answer lost its citations.
+  const setbackTest = (SETBACK_QUESTION.test(question) && !/\bwell\b|\bwellhead\b|\bwellfield\b|water supply/i.test(question))
+    ? ' ' + SETBACK_TERMS : '';
   // Expansion is ONLY for whole-project questions, which need a wide net across
   // many sections. Applying it to a narrow lookup actively hurts: "what's the
   // minimum lot size for a single-family home?" would match the house
   // expansion, flood the query with new-construction vocabulary, and push the
   // one chunk that actually answers it out of the top 5.
-  if (!isGuide) return question + permitTest;
+  if (!isGuide) return question + permitTest + setbackTest;
 
   const extra = TOPIC_EXPANSIONS.filter(t => t.match.test(question)).map(t => t.terms);
   // Always pull in the cross-cutting steps that apply to essentially every
   // project regardless of what's being built.
   extra.push('permit fee required form application inspection setbacks notice of commencement');
-  return question + permitTest + ' ' + extra.join(' ');
+  return question + permitTest + setbackTest + ' ' + extra.join(' ');
 }
 
 // ══════════════════════════════════════════════════════════════════════
