@@ -3,6 +3,7 @@
 // requests to the Anthropic API so the API key never reaches the browser.
 
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -28,6 +29,25 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp
 const ALLOWED_DOC_TYPES = ['application/pdf'];
 
 app.set('trust proxy', 1); // Railway runs behind a proxy — needed for real client IPs
+
+// ── Compression ────────────────────────────────────────────────────────
+// Everything this app sends is text, and it sends a lot of it: the passage
+// index is 707 KB on the first question, the page itself about 200 KB, and
+// three.js another 2.1 MB if anything draws with it. Over county data on a
+// phone that is a real wait, and gzip takes roughly three quarters off.
+//
+// The streamed answer must NOT be compressed. The middleware buffers what it
+// compresses, which would gather the whole answer and deliver it in one lump
+// instead of word by word — the thing the streaming endpoint exists to avoid.
+// It already sets Cache-Control: no-transform, which compression honours on
+// its own, but a rule this easy to lose in a refactor is worth stating here
+// where anyone touching compression will read it.
+app.use(compression({
+  filter: (req, res) => {
+    if (String(res.getHeader('Content-Type') || '').includes('text/event-stream')) return false;
+    return compression.filter(req, res);
+  }
+}));
 // Attachments arrive base64-encoded inside the JSON body, which inflates them
 // by about a third — the default 100kb limit would reject every real file.
 app.use(express.json({ limit: '20mb' }));
