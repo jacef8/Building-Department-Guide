@@ -99,7 +99,7 @@ textarea,input,select{font:inherit}
 .disclaimer{border-radius:var(--r-s);padding:9px 14px;font-size:13.5px;line-height:1.45;
   background:var(--tint);border:1px solid var(--line);color:var(--ink-2);text-align:center}
 .disclaimer a{color:var(--maroon);font-weight:700}
-.disclaimer .short{display:none}
+.disclaimer .short,.empty-state .short{display:none}
 .foot-notice{display:none}          /* the rail carries this instead */
 
 /* ── rail ───────────────────────────────────────────────────────── */
@@ -224,9 +224,11 @@ textarea,input,select{font:inherit}
 /* ── ask box ────────────────────────────────────────────────────── */
 .input-bar{display:flex;gap:8px;align-items:flex-end;background:var(--surface);
   border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--raise);padding:9px}
-.input-bar textarea{flex:1;min-height:46px;max-height:140px;resize:none;border:1px solid var(--line);
+/* min-height holds one full line plus padding. The placeholder used to wrap
+   to two lines in a one-line box, which cut the second line in half. */
+.input-bar textarea{flex:1;min-height:48px;max-height:140px;resize:none;border:1px solid var(--line);
   border-radius:var(--r-s);background:var(--surface-2);color:var(--ink);padding:12px 13px;
-  font-size:16px;line-height:1.4}
+  font-size:16px;line-height:1.4;overflow-y:auto}
 .input-bar .attach-btn{width:46px;height:46px;flex:none;padding:0;border-radius:var(--r-s);
   border:1px solid var(--line);background:var(--surface);color:var(--maroon);
   display:grid;place-items:center}
@@ -313,8 +315,8 @@ textarea,input,select{font:inherit}
     background:rgba(255,255,255,.14);color:#fff;font-size:14px;font-weight:800}
   .new-btn svg{width:17px;height:17px}
   .titles{flex:1;min-width:0}
-  .disclaimer .long{display:none}
-  .disclaimer .short{display:inline}
+  .disclaimer .long,.empty-state .long{display:none}
+  .disclaimer .short,.empty-state .short{display:inline}
 
   /* flex, not grid: as a grid the first track collapsed to 0 and the
      notice sat on top of the answer */
@@ -343,7 +345,16 @@ textarea,input,select{font:inherit}
 
   .msg.assistant .bubble{padding:15px 16px}
   .msg.assistant .bubble p,.msg.assistant .bubble li{font-size:16px}
-  .empty-state{padding:12px 2px}
+  /* With the paperclip shown, the ask box was one pixel too narrow for its
+     own placeholder at 360px, so the text wrapped and the second line was
+     cut in half. Narrower padding on the Ask button, same 46px tap height. */
+  .input-bar{gap:6px;padding:8px}
+  .input-bar #sendBtn{padding:0 14px}
+  .empty-state{padding:10px 2px}
+  /* Four suggestions, not six. The opening screen has to fit without
+     scrolling (directive 2.3) and the wording is picked at random, so it
+     needs headroom for a long one rather than fitting exactly. */
+  .suggestion-row .suggestion-chip:nth-child(n+5){display:none}
   .empty-state h2{font-size:19px}
   .suggestion-chip{font-size:13.5px}
   .stage canvas{height:290px}
@@ -1957,7 +1968,7 @@ function render() {
           <div class="empty-state">
             <div class="icon"></div>
             <h2>Ask about permits, fees, or forms</h2>
-            <p>Answers come only from the Building Department Guide, the Permit Eligibility Guide, the Comprehensive Plan, the Land Development Code, the Fee Schedule and the HB 803 memo. Ask about a whole project — "what are the steps and permits for building a pole barn house?" — for a step-by-step walkthrough with an estimated fee breakdown. Type a parcel number, an owner's last name or a road name to pull the property up from the tax roll; every answer after that applies to that parcel.</p>
+            <p><span class="long">Answers come only from the Building Department Guide, the Permit Eligibility Guide, the Comprehensive Plan, the Land Development Code, the Fee Schedule and the HB 803 memo. Ask about a whole project — "what are the steps and permits for building a pole barn house?" — for a step-by-step walkthrough with an estimated fee breakdown. Type a parcel number, an owner's last name or a road name to pull the property up from the tax roll; every answer after that applies to that parcel.</span><span class="short">Answers come only from the department’s own documents. Type a parcel number, an owner’s last name or a road name to pull the property up from the tax roll — every answer after that applies to it.</span></p>
             <div class="suggestion-row">
               ${SUGGESTIONS.map(s => `<button class="suggestion-chip" onclick="askSuggestion(this)">${escapeHtml(s)}</button>`).join('')}
             </div>
@@ -2023,7 +2034,7 @@ function render() {
           <button class="attach-btn" title="Attach a PDF or picture" aria-label="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
         ` : ''}
         <textarea id="questionInput" rows="1" placeholder="${window.innerWidth <= 779
-          ? 'Ask, or type a parcel number'
+          ? 'Ask, or a parcel number'
           : (UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number, owner or road...' : 'Ask a question, or type a parcel number, owner name or road...')}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
         <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking…' : 'Ask'}</button>
       </div>

@@ -116,6 +116,25 @@ for (const rule of ['.new-btn', '.tools-toggle', '.parcelbar'])
   ok(/min-(height|width):44px/.test(ruleBody(rule)) || /min-height:4[4-9]px|min-height:[5-9]\dpx/.test(ruleBody(rule)),
      `${rule} is under the 44px tap target`);
 
+// The opening screen has to fit a phone without scrolling (directive 2.3),
+// so the intro has a short version — and the short one must be hidden on
+// desktop, or the page prints the same thing twice.
+ok(/<span class="long">/.test(html) && /<span class="short">/.test(html),
+   'the empty state lost its short intro');
+ok(ruleBody('.disclaimer .short,.empty-state .short').includes('display:none'),
+   'the short intro is not hidden on desktop');
+ok(css.lastIndexOf('.empty-state .short{display:inline') > phoneBlock ||
+   css.lastIndexOf('.empty-state .short') > phoneBlock,
+   'the short intro is never shown on a phone');
+ok(/nth-child\(n\+5\)\{display:none\}/.test(css), 'the phone shows more than four suggestions');
+
+// the placeholder has to fit the box on a phone with the paperclip showing,
+// or it wraps into a one-line box and the second line is cut in half
+const afterTernary = html.slice(html.indexOf('window.innerWidth <= 779'));
+const phonePlaceholder = (afterTernary.match(/\?\s*'([^']*)'/) || [])[1];
+ok(phonePlaceholder && phonePlaceholder.length <= 25,
+   `the phone placeholder is ${phonePlaceholder ? phonePlaceholder.length : '?'} characters; over 25 it wraps and clips`);
+
 // directive 2.1: no glow or haze anywhere
 ok(!/text-shadow/.test(css), 'text-shadow is on the rejected list');
 ok(!/backdrop-filter/.test(css), 'backdrop-filter is on the rejected list');
