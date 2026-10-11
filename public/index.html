@@ -16,779 +16,319 @@
 </head>
 <body>
 <style>
-  :root {
-    /* The county document standard (design directive, section 15): the Clerk
-       letterhead's PANTONE 188 C maroon and 4525 C gold, with the warm cream
-       tints between them. The assistant is the public face of the same
-       department whose guides, fee schedule and letters use these colours, so
-       an applicant sees one county rather than two. Gold is for rules and
-       borders only — never for text, which is too light to read on white. */
-    --maroon: #751D2C;        /* title bars, primary buttons, section bands */
-    --maroon-head: #8C3444;   /* secondary bars, table headers, small caps labels */
-    --maroon-deep: #5E1723;   /* hover / pressed */
-    --gold: #C1B572;          /* rules and borders only */
-    --tint: #F6F3E7;          /* row tint, callout fill, chips */
-    --tint-deep: #EFEADA;     /* the next step down, for a nested fill */
-    --bg: #FAF8F2;            /* page behind the panels */
-    --panel: #FFFFFF;
-    --grid: #D3C9A2;          /* borders */
-    --ink: #231F20;           /* body text */
-    --muted: #6B6258;         /* notes, secondary text */
-    --danger: #B03A2E;        /* status only — errors and delete */
-    --font: Aptos, Calibri, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    --shadow-sm: 0 2px 6px rgba(35, 31, 32, 0.08);
-    --shadow-md: 0 8px 24px rgba(35, 31, 32, 0.12);
-    --shadow-lg: 0 20px 50px rgba(35, 31, 32, 0.18);
-  }
-  * { box-sizing: border-box; }
-  html, body {
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: transparent;
-  }
-  .app {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    max-height: 100vh;
-    font-family: var(--font);
-    font-size: 17px;
-    color: var(--ink);
-    background: radial-gradient(circle at 15% 0%, #FFFFFF 0%, var(--bg) 55%);
-    overflow: hidden;
-  }
+/* ══════════════════════════════════════════════════════════════════
+   Liberty County Permit Assistant
 
-  /* ── Header ───────────────────────────────────────────── */
-  .header {
-    background: linear-gradient(120deg, var(--maroon) 0%, var(--maroon-deep) 100%);
-    color: white;
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: relative;
-    overflow: hidden;
-    /* the gold rule that closes a county title block */
-    border-bottom: 3px solid var(--gold);
-  }
-  .header::after {
-    content: "";
-    position: absolute;
-    top: -60%; right: -10%;
-    width: 320px; height: 320px;
-    background: radial-gradient(circle, rgba(193,181,114,0.22) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .header .bell {
-    width: 44px; height: 44px;
-    border-radius: 8px;
-    background: var(--gold);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
-    box-shadow: var(--shadow-sm);
-    position: relative;
-    z-index: 1;
-  }
-  .header .titles { line-height: 1.25; position: relative; z-index: 1; }
-  .header .eyebrow {
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--tint);
-    font-weight: 800;
-  }
-  .header h1 {
-    margin: 3px 0 0;
-    font-size: 25px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-  .header .badge {
-    margin-left: auto;
-    font-size: 13px;
-    background: rgba(255,255,255,0.18);
-    padding: 7px 14px;
-    border-radius: 6px;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    font-weight: 700;
-    position: relative;
-    z-index: 1;
-    backdrop-filter: blur(6px);
-  }
+   Style: Work tool (design directive 3.2) — a county app used at a
+   counter all day. Quiet, fast to scan, clarity over decoration.
 
-  /* ── Source / tools strip ─────────────────────────────── */
-  .sources-strip {
-    background: white;
-    border-bottom: 1px solid var(--grid);
-    padding: 10px 24px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    /* on a phone the row would otherwise push "+ New" and the parcel link off
-       the right edge, and nothing may scroll sideways */
-    flex-wrap: wrap;
-    font-size: 14.5px;
-    color: var(--muted);
-    position: relative;
-  }
-  .sources-strip .kb-toggle { white-space: nowrap; }
-  .kb-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    background: var(--bg);
-    border: 1px solid var(--grid);
-    border-radius: 6px;
-    padding: 9px 15px;
-    font-size: 14.5px;
-    font-weight: 700;
-    color: var(--ink);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  .kb-toggle:hover { border-color: var(--gold); background: var(--tint); }
-  .kb-toggle .count-badge {
-    background: var(--maroon);
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-  .kb-toggle .chevron { transition: transform 0.15s ease; font-size: 11px; color: var(--muted); }
-  .kb-toggle.open .chevron { transform: rotate(180deg); }
+   Who:   Building Department staff with an applicant at the counter,
+          and the public on the same tool in public mode.
+   Where: a desk at the counter; a phone away from the office.
+   The one thing: a correct answer with the source to show the applicant.
 
-  .kb-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 24px;
-    background: white;
-    border: 1px solid var(--grid);
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    z-index: 20;
-    min-width: 260px;
-  }
-  .kb-dropdown .doc-chip {
-    background: var(--bg);
-    border: 1px solid var(--grid);
-    border-radius: 6px;
-    padding: 9px 14px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--ink);
-    text-decoration: none;
-    transition: all 0.15s ease;
-  }
-  a.doc-chip { cursor: pointer; }
-  a.doc-chip:hover { border-color: var(--gold); background: var(--tint); }
-  .doc-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
-  .doc-chip .chip-arrow { margin-left: auto; color: var(--muted); font-size: 13px; }
-  a.doc-chip:hover .chip-arrow { color: var(--maroon); }
+   Layout (directive 2.3): one screen, never a long page scroll. The
+   answer is the biggest thing and scrolls in its own column; the
+   controls sit in a rail beside it, and in a drawer on phones.
 
-  .parcel-link {
-    margin-left: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--maroon);
-    color: white;
-    text-decoration: none;
-    padding: 10px 17px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 700;
-    box-shadow: var(--shadow-sm);
-    transition: background 0.15s ease;
-    white-space: nowrap;
-  }
-  .parcel-link:hover { background: var(--maroon-deep); }
+   CSS trap (2.3): every phone rule lives in the one media block at the
+   END of this file, after the base rules, or it loses on source order.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  color-scheme:light;
+  --bg:#F2F1EC;            /* page */
+  --surface:#FFFFFF;       /* cards */
+  --surface-2:#EBE9E2;     /* inputs, wells, stripes */
+  --line:#D8D4C8;
+  --ink:#16140F;           /* body, ~17:1 on white */
+  --ink-2:#44403A;         /* secondary, ~9:1 */
+  --ink-3:#625C53;         /* labels, ~6:1 */
+  --maroon:#751D2C;        /* county letterhead, PANTONE 188 C */
+  --maroon-head:#8C3444;
+  --gold:#C1B572;          /* rules and the mark only, never text */
+  --tint:#F6F3E7;
+  --grid:#D3C9A2;
+  --ok:#137A3F; --bad:#C62828;
+  --r:16px; --r-s:12px;
+  --raise:0 1px 2px rgba(0,0,0,.08),0 4px 10px -6px rgba(0,0,0,.18);
+  --font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);
+  font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+h1,h2,h3,h4{margin:0;line-height:1.25}
+button{font:inherit;cursor:pointer}
+textarea,input,select{font:inherit}
+:where(a,button,input,textarea,select,summary,[tabindex]):focus-visible{
+  outline:2px solid var(--maroon);outline-offset:2px;border-radius:6px}
+.num,td,th{font-variant-numeric:tabular-nums}
 
-  /* The parcel the conversation is about, held in view under the header so
-     it's never a guess which property an answer is talking about. */
-  .parcel-bar {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 10px 24px;
-    background: var(--maroon);
-    color: #fff;
-    border-bottom: 3px solid var(--gold);
-  }
-  .parcel-bar .pb-main {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-    flex-wrap: wrap;
-  }
-  .parcel-bar .pb-tag {
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    /* the standard allows white text on maroon, never gold text */
-    color: var(--tint);
-  }
-  .parcel-bar .pb-id { font-size: 15px; font-weight: 800; letter-spacing: 0.02em; }
-  .parcel-bar .pb-detail { font-size: 13px; color: var(--tint); }
-  .parcel-bar .pb-clear {
-    background: rgba(255, 255, 255, 0.14);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    padding: 6px 14px;
-    border-radius: 5px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  .parcel-bar .pb-clear:hover { background: rgba(255, 255, 255, 0.26); }
-  .parcel-bar .pb-flu {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-  .parcel-bar .pb-flu label {
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    /* the standard allows white text on maroon, never gold text */
-    color: var(--tint);
-  }
-  .parcel-bar .pb-flu select {
-    font: inherit;
-    font-size: 13px;
-    padding: 5px 8px;
-    border-radius: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: #fff;
-    color: var(--maroon);
-    max-width: 230px;
-  }
-  .parcel-bar .pb-flu a {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--tint);
-    text-decoration: underline;
-    white-space: nowrap;
-  }
-  @media (max-width: 640px) {
-    .parcel-bar { flex-wrap: wrap; }
-    .parcel-bar .pb-flu { width: 100%; }
-    .parcel-bar .pb-flu select { flex: 1; max-width: none; }
-  }
-  @media (max-width: 640px) {
-    .parcel-bar { padding: 9px 16px; }
-    .parcel-bar .pb-detail { font-size: 12px; }
-  }
+/* ── shell ──────────────────────────────────────────────────────── */
+#app{height:100dvh;display:grid;gap:10px;padding:10px;
+  grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+#app>*{min-height:0}
+.rail,.main,.detail{overflow:auto}
+@media(min-width:1180px){
+  #app{grid-template-columns:258px minmax(0,1fr) 372px}
+  .header{grid-column:1/-1}
+}
+@media(min-width:780px) and (max-width:1179px){
+  #app{grid-template-columns:230px minmax(0,1fr)}
+  .header{grid-column:1/-1}
+  #app>.detail{display:none}
+}
 
-  .tools-toggle {
-    display: none;                     /* phones only — see the media query */
-    margin-left: auto;
-    width: 38px; height: 38px;
-    align-items: center; justify-content: center;
-    border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 7px;
-    background: rgba(255,255,255,0.12);
-    color: #fff;
-    cursor: pointer;
-    flex-shrink: 0;
-    position: relative; z-index: 1;
-  }
-  .tools-toggle svg { width: 20px; height: 20px; }
-  .tools-toggle.open { background: #fff; color: var(--maroon); border-color: #fff; }
+/* ── header ─────────────────────────────────────────────────────── */
+.header{display:flex;align-items:center;gap:12px;background:var(--maroon);
+  border-radius:var(--r);padding:10px 14px;color:#fff}
+.bell{width:34px;height:34px;flex:none;border-radius:9px;background:var(--gold);
+  display:grid;place-items:center}
+.bell svg{width:22px;height:22px;display:block}
+.titles{display:flex;flex-direction:column;min-width:0}
+.eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
+  color:rgba(255,255,255,.84)}
+.header h1{font-size:18px;font-weight:800;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{margin-left:auto;display:inline-flex;align-items:center;min-height:32px;padding:0 12px;
+  border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);
+  font-size:12.5px;font-weight:700;white-space:nowrap}
+.tools-toggle,.parcelbar{display:none}
 
-  .disclaimer .short, .label-short { display: none; }
+/* ── notices ────────────────────────────────────────────────────── */
+.disclaimer{border-radius:var(--r-s);padding:9px 14px;font-size:13.5px;line-height:1.45;
+  background:var(--tint);border:1px solid var(--line);color:var(--ink-2);text-align:center}
+.disclaimer a{color:var(--maroon);font-weight:700}
+.disclaimer .short{display:none}
+.foot-notice{display:none}          /* the rail carries this instead */
 
-  .sources-used > summary {
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--muted);
-    list-style: none;
-    padding: 2px 0;
-  }
-  .sources-used > summary::-webkit-details-marker { display: none; }
-  .sources-used > summary::before { content: "▸ "; display: inline-block; }
-  .sources-used[open] > summary::before { content: "▾ "; }
-  @media (min-width: 701px) { .sources-used > summary { display: none; } }
+/* ── rail ───────────────────────────────────────────────────────── */
+.rail{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--raise)}
+.card>h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:800;padding:12px 14px 0;margin:0}
+.card>.cbody{padding:10px 14px 14px}
+.sources-strip{display:flex;flex-direction:column;gap:8px;position:relative}
+.kb-toggle,.strip-btn,.parcel-link{display:flex;align-items:center;gap:9px;width:100%;
+  min-height:46px;padding:0 12px;border-radius:var(--r-s);border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);font-weight:700;font-size:14px;text-align:left;
+  text-decoration:none}
+.kb-toggle:hover,.strip-btn:hover,.parcel-link:hover{background:var(--surface-2)}
+.kb-toggle.open{background:var(--maroon);border-color:var(--maroon);color:#fff}
+.count-badge{margin-left:auto;font-size:12px;font-weight:800;color:var(--ink-3);
+  background:var(--surface-2);border-radius:999px;padding:2px 8px}
+.kb-toggle.open .count-badge{background:rgba(255,255,255,.2);color:#fff}
+.chevron{font-size:9px;color:var(--ink-3)}
+.kb-toggle.open .chevron{color:#fff;transform:rotate(180deg)}
+.label-short{display:none}
+.kb-dropdown{display:flex;flex-direction:column;gap:6px;padding:4px 0 2px}
+.doc-chip{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 11px;
+  border:1px solid var(--line);border-radius:10px;background:var(--surface-2);
+  color:var(--ink-2);font-size:13px;font-weight:650;text-decoration:none}
+.doc-chip:hover{background:var(--tint);color:var(--maroon)}
+.doc-chip .dot{width:7px;height:7px;flex:none;border-radius:50%;background:var(--gold)}
+.chip-arrow{margin-left:auto;color:var(--ink-3);font-size:12px}
 
-  /* ── Phones: give the answer the screen ───────────────────
-     Measured on a 375x812 phone, the chrome took 64% and the answer got 289px.
-     The header, the two disclaimers and the button strip are all useful at a
-     desk and all in the way on a phone, so on a small screen the header
-     collapses to one line, the strip to one row, the badge and the repeated
-     footer disclaimer go, and the top notice says the same thing in a
-     sentence. */
-  @media (max-width: 700px) {
-    .header { padding: 9px 14px; gap: 10px; border-bottom-width: 2px; }
-    .header .bell { width: 30px; height: 30px; border-radius: 6px; }
-    .header .bell svg { width: 18px; height: 18px; }
-    .header .eyebrow { font-size: 9.5px; letter-spacing: 0.1em; }
-    .header h1 { font-size: 17px; margin: 0; }
-    .header .badge { display: none; }
-    .header::after { display: none; }
+/* history drops below its button rather than floating over the answer */
+.history-panel{border:1px solid var(--line);border-radius:var(--r-s);background:var(--surface);
+  overflow:hidden}
+.hp-head{display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--surface-2);
+  border-bottom:1px solid var(--line);font-size:13px}
+.hp-clear{margin-left:auto;background:none;border:0;color:var(--maroon);font-weight:700;font-size:12.5px}
+.hp-list{max-height:290px;overflow:auto}
+.hp-item{display:flex;align-items:center;gap:6px;padding:9px 11px;cursor:pointer}
+.hp-item+.hp-item{border-top:1px solid var(--line)}
+.hp-item:hover{background:var(--tint)}
+.hp-item.active{background:var(--tint);box-shadow:inset 3px 0 0 var(--maroon)}
+.hp-body{min-width:0;flex:1}
+.hp-title{font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.hp-meta{font-size:12px;color:var(--ink-3);margin-top:1px}
+.hp-del{flex:none;width:28px;height:28px;border-radius:8px;border:0;background:none;
+  color:var(--ink-3);font-size:17px;line-height:1}
+.hp-del:hover{background:var(--surface-2);color:var(--bad)}
+.hp-empty{padding:14px 12px;font-size:13px;color:var(--ink-3);line-height:1.45}
+.rail .rail-note{font-size:12.5px;color:var(--ink-3);line-height:1.45;padding:0 2px}
 
-    .disclaimer { padding: 6px 14px; font-size: 11.5px; line-height: 1.35; }
-    .disclaimer .long { display: none; }
-    .disclaimer .short { display: inline; }
-    .label-long { display: none; }
-    .label-short { display: inline; }
-    /* the same words are already at the top — no need to repeat them under
-       the box where they cost a fifth of the screen */
-    .foot-notice { display: none; }
+/* ── main column ────────────────────────────────────────────────── */
+.main{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:10px}
+.chat{overflow:auto;padding-right:2px}
+.msg{display:flex;gap:10px;margin:0 0 12px;align-items:flex-start}
+.msg.user{justify-content:flex-end}
+.msg .avatar{display:none}
+.msg.user .bubble{background:var(--maroon);color:#fff;border-radius:14px 14px 4px 14px;
+  padding:9px 14px;font-weight:650;max-width:min(620px,88%)}
+.msg.assistant .bubble{background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);box-shadow:var(--raise);padding:17px 19px;width:100%}
+.msg.assistant .bubble p{margin:0 0 12px;font-size:16px}
+.msg.assistant .bubble p:last-child{margin-bottom:0}
+.msg.assistant .bubble h4{font-size:16px;font-weight:800;margin:16px 0 6px}
+.msg.assistant .bubble h4:first-child{margin-top:0}
+.msg.assistant .bubble ul,.msg.assistant .bubble ol{margin:0 0 12px;padding-left:22px}
+.msg.assistant .bubble li{margin:0 0 5px;font-size:16px}
+.msg.assistant .bubble strong{font-weight:800}
+.msg.assistant .bubble table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14.5px}
+.msg.assistant .bubble th{background:var(--maroon-head);color:#fff;font-weight:800;font-size:13px;
+  text-align:left;padding:8px 10px;border:1px solid var(--grid)}
+.msg.assistant .bubble td{padding:8px 10px;border:1px solid var(--grid)}
+.msg.assistant .bubble tbody tr:nth-child(odd){background:var(--tint)}
+.inline-cite{color:var(--maroon);font-weight:700;text-decoration:underline;
+  text-underline-offset:2px;text-decoration-thickness:1px;white-space:nowrap}
+.sent-files{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.sent-files .f{font-size:12.5px;font-weight:700;background:var(--surface-2);
+  border-radius:999px;padding:3px 10px;color:var(--ink-2)}
+.msg.user .sent-files .f{background:rgba(255,255,255,.2);color:#fff}
+.typing{display:flex;gap:5px;padding:4px 0}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--maroon);opacity:.35;
+  animation:blink 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:.9}}
 
-    /* the four controls are occasional, so they live behind the header button
-       and take no room until they are asked for */
-    .tools-toggle { display: inline-flex; }
-    .sources-strip { display: none; }
-    .sources-strip.open { display: flex; flex-wrap: wrap; padding: 8px 14px; gap: 8px; }
-    .sources-strip .kb-toggle,
-    .sources-strip .strip-btn { padding: 6px 10px; font-size: 13px; }
-    /* the desktop rule pushes this to the far right; on a wrapped tray row
-       that strands it alone against the edge */
-    .parcel-link { padding: 7px 11px; font-size: 13px; margin-left: 0; }
+/* citations: a quiet list under the answer, never pushing it off screen */
+.sources-used{margin-top:14px;border-top:1px solid var(--line);padding-top:11px;
+  display:flex;flex-wrap:wrap;gap:6px}
+.sources-used>summary{list-style:none;font-size:12.5px;font-weight:800;color:var(--ink-3);
+  cursor:pointer;width:100%;text-transform:uppercase;letter-spacing:.07em}
+.sources-used>summary::-webkit-details-marker{display:none}
+.sources-used>summary::before{content:"▸ ";display:inline-block}
+.sources-used[open]>summary::before{content:"▾ "}
+@media(min-width:1180px){.sources-used{display:none}}   /* the detail column shows them */
+.citation-tag{display:inline-block;font-size:12.5px;font-weight:700;color:var(--maroon);
+  background:var(--tint);border:1px solid var(--grid);border-radius:999px;padding:4px 10px;
+  text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.citation-tag:hover{background:var(--surface-2)}
 
-    .chat { padding: 12px 14px; }
-    .msg .bubble { max-width: 100%; }
-    .input-bar { padding: 8px 12px; }
-    .input-bar textarea::placeholder { white-space: nowrap; text-overflow: ellipsis; }
-    /* nine citations at three lines each buried the answer they belong to */
-    .sources-used .citation-tag {
-      font-size: 12px;
-      max-width: 100%;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
+/* empty state */
+.empty-state{max-width:720px;margin:0 auto;padding:22px 4px}
+.empty-state .icon{display:none}
+.empty-state h2{font-size:22px;font-weight:800;margin-bottom:8px}
+.empty-state p{font-size:15.5px;color:var(--ink-2);margin:0 0 16px}
+.suggestion-row{display:flex;flex-wrap:wrap;gap:8px}
+.suggestion-chip{min-height:42px;padding:0 14px;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink-2);font-size:14px;font-weight:650;text-align:left}
+.suggestion-chip:hover{background:var(--tint);color:var(--maroon);border-color:var(--grid)}
 
-  /* ── Chat area ────────────────────────────────────────── */
-  .chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-  .msg { display: flex; gap: 14px; max-width: 94%; }
-  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
-  .msg .avatar {
-    width: 38px; height: 38px; border-radius: 7px;
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 800;
-    margin-top: 2px;
-    box-shadow: var(--shadow-sm);
-  }
-  .msg.assistant .avatar { background: var(--maroon); color: white; }
-  .msg.user .avatar { background: var(--gold); color: white; }
-  .bubble {
-    padding: 15px 19px;
-    border-radius: 9px;
-    font-size: 17px;
-    line-height: 1.6;
-  }
-  .msg.assistant .bubble {
-    background: white;
-    border-left: 4px solid var(--gold);
-    box-shadow: var(--shadow-md);
-  }
-  .msg.user .bubble {
-    background: var(--maroon);
-    color: white;
-  }
-  .bubble p { margin: 0 0 12px; }
-  .bubble p:last-child { margin-bottom: 0; }
-  .citation-tag {
-    display: inline-block;
-    font-size: 12.5px;
-    font-weight: 600;
-    background: var(--bg);
-    border: 1px solid var(--grid);
-    color: var(--maroon);
-    padding: 4px 11px;
-    border-radius: 5px;
-    margin: 4px 5px 0 0;
-    text-decoration: none;
-    transition: all 0.15s ease;
-  }
-  a.citation-tag { cursor: pointer; }
-  .inline-cite {
-    color: var(--maroon);
-    background: var(--tint);
-    border-bottom: 1px solid var(--gold);
-    border-radius: 3px;
-    padding: 0 3px;
-    text-decoration: none;
-    font-size: 0.92em;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .inline-cite:hover { background: var(--tint-deep); color: var(--maroon-deep); border-color: var(--maroon); }
+/* ── ask box ────────────────────────────────────────────────────── */
+.input-bar{display:flex;gap:8px;align-items:flex-end;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--raise);padding:9px}
+.input-bar textarea{flex:1;min-height:46px;max-height:140px;resize:none;border:1px solid var(--line);
+  border-radius:var(--r-s);background:var(--surface-2);color:var(--ink);padding:12px 13px;
+  font-size:16px;line-height:1.4}
+.input-bar .attach-btn{width:46px;height:46px;flex:none;padding:0;border-radius:var(--r-s);
+  border:1px solid var(--line);background:var(--surface);color:var(--maroon);
+  display:grid;place-items:center}
+.input-bar .attach-btn svg{width:21px;height:21px}
+.input-bar .attach-btn:hover{background:var(--tint)}
+.input-bar #sendBtn{min-height:46px;padding:0 20px;border:0;border-radius:var(--r-s);
+  background:var(--maroon);color:#fff;font-weight:800;font-size:15px}
+.input-bar #sendBtn:hover{background:var(--maroon-head)}
+.input-bar #sendBtn:disabled,.input-bar .attach-btn:disabled{opacity:.55;cursor:default}
+.attach-tray{display:flex;flex-wrap:wrap;gap:7px}
+.attach-chip{display:inline-flex;align-items:center;gap:7px;background:var(--surface);
+  border:1px solid var(--line);border-radius:999px;padding:5px 7px 5px 11px;font-size:12.5px}
+.attach-chip .nm{font-weight:700;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attach-chip .sz{color:var(--ink-3)}
+.attach-chip .rm{width:24px;height:24px;border-radius:50%;border:0;background:var(--surface-2);
+  color:var(--ink-2);font-size:15px;line-height:1}
+.attach-chip .rm:hover{background:var(--bad);color:#fff}
+.error-banner{background:#FDECEC;border:1px solid #E9B7B7;color:#8A1C1C;border-radius:var(--r-s);
+  padding:10px 13px;font-size:14px;font-weight:650}
 
-  a.citation-tag:hover { background: var(--tint); border-color: var(--gold); transform: translateY(-1px); }
-  .msg.assistant .sources-used {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px dashed var(--grid);
-  }
+/* ── detail column ──────────────────────────────────────────────── */
+.detail{display:flex;flex-direction:column;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:14px;margin:0}
+.kv dt{color:var(--ink-3);font-weight:700}
+.kv dd{margin:0;font-weight:650;text-align:right;overflow-wrap:anywhere}
+.stage{position:relative;background:var(--tint);border:1px solid var(--line);
+  border-radius:var(--r-s);overflow:hidden}
+.stage canvas{display:block;width:100%;height:300px;touch-action:none}
+.stage .hint{position:absolute;left:9px;bottom:8px;background:rgba(255,255,255,.94);
+  border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:12px;
+  font-weight:700;color:var(--ink-2)}
+.legend{display:flex;flex-wrap:wrap;gap:9px 14px;margin-top:10px;font-size:12.5px;
+  font-weight:700;color:var(--ink-2)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;
+  vertical-align:-1px}
+.note{font-size:12.5px;color:var(--ink-3);margin:8px 0 0;line-height:1.45}
+.srcs{display:flex;flex-direction:column;gap:6px}
+.srcs a,.srcs span.flat{display:block;border:1px solid var(--line);border-radius:10px;
+  padding:8px 11px;font-size:13px;font-weight:700;color:var(--maroon);text-decoration:none;
+  background:var(--surface)}
+.srcs a:hover{background:var(--tint)}
+.srcs .where{display:block;font-weight:600;color:var(--ink-3);font-size:12px;margin-top:1px}
+.empty-detail{font-size:13px;color:var(--ink-3);line-height:1.45}
 
-  .empty-state {
-    margin: auto;
-    text-align: center;
-    color: var(--muted);
-    max-width: 520px;
-  }
-  .empty-state .icon {
-    font-size: 28px;
-    margin: 0 auto 16px;
-    width: 72px; height: 72px;
-    display: flex; align-items: center; justify-content: center;
-    background: white;
-    border-radius: 10px;
-    box-shadow: var(--shadow-sm);
-  }
-  .empty-state h2 { color: var(--maroon); font-size: 24px; margin: 0 0 8px; font-weight: 800; letter-spacing: -0.02em; }
-  .empty-state p { font-size: 16px; line-height: 1.6; margin: 0 0 20px; }
-  .suggestion-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .suggestion-chip {
-    background: white;
-    border: 1px solid var(--grid);
-    color: var(--maroon);
-    font-size: 14.5px;
-    font-weight: 600;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    transition: border-color 0.15s ease, background 0.15s ease;
-  }
-  .suggestion-chip:hover { border-color: var(--gold); background: var(--tint); }
+/* parcel on the counter */
+.parcel-bar{display:flex;flex-direction:column;gap:9px}
+.pb-tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;
+  color:var(--maroon)}
+.pb-id{font-size:15px;font-weight:800;letter-spacing:-.01em;overflow-wrap:anywhere}
+.pb-detail{font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.pb-flu{display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:13px}
+.pb-flu label{font-weight:700;color:var(--ink-3);width:100%}
+.pb-flu select{flex:1;min-width:0;min-height:40px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface-2);color:var(--ink);padding:0 9px;font-size:14px;font-weight:650}
+.pb-flu a{color:var(--maroon);font-weight:700;white-space:nowrap}
+.pb-clear{min-height:38px;padding:0 13px;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink-2);font-weight:700;font-size:13px;align-self:flex-start}
+.pb-clear:hover{background:var(--surface-2);color:var(--bad)}
 
-  .typing { display: flex; gap: 6px; padding: 8px 0; }
-  .typing span {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--muted);
-    animation: bounce 1.2s infinite ease-in-out;
-  }
-  .typing span:nth-child(2) { animation-delay: 0.15s; }
-  .typing span:nth-child(3) { animation-delay: 0.3s; }
-  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
+/* ── staff sign-in ──────────────────────────────────────────────── */
+.signin{max-width:380px;margin:52px auto;padding:0 20px;text-align:center}
+.signin p{color:var(--ink-2);font-size:15px;line-height:1.5;margin-bottom:18px}
+.signin input{width:100%;min-height:48px;border-radius:var(--r-s);border:1px solid var(--line);
+  background:var(--surface);padding:0 14px;font-size:16px;margin-bottom:10px}
+.signin button{width:100%;min-height:48px;border:0;border-radius:var(--r-s);background:var(--maroon);
+  color:#fff;font-weight:800;font-size:16px}
 
-  /* ── Input ────────────────────────────────────────────── */
-  .input-bar {
-    background: white;
-    border-top: 1px solid var(--grid);
-    padding: 14px 24px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-  .input-bar textarea {
-    flex: 1;
-    resize: none;
-    border: 2px solid var(--grid);
-    border-radius: 8px;
-    padding: 13px 16px;
-    font-family: var(--font);
-    font-size: 17px;
-    line-height: 1.3;
-    max-height: 96px;
-    outline: none;
-    color: var(--ink);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-  .input-bar textarea:focus { border-color: var(--maroon); box-shadow: 0 0 0 3px rgba(27,58,107,0.08); }
-  .input-bar button {
-    background: var(--maroon);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 0 26px;
-    height: 50px;
-    font-size: 15.5px;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-    transition: background 0.15s ease;
-    flex-shrink: 0;
-  }
-  .input-bar button:hover:not(:disabled) { background: var(--maroon-deep); }
-  .input-bar button:disabled { background: #C4BBA6; cursor: not-allowed; }
+/* ══ phones: ALL phone rules live here, after the base rules ══════ */
+@media(max-width:779px){
+  #app{height:100dvh;grid-template-rows:auto minmax(0,1fr);padding:8px;gap:8px}
+  .header{padding:9px 12px}
+  .header h1{font-size:17px}
+  .eyebrow,.badge{display:none}
+  .tools-toggle{display:inline-flex;align-items:center;justify-content:center;margin-left:auto;
+    min-width:44px;min-height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.34);
+    background:transparent;color:#fff}
+  .tools-toggle svg{width:21px;height:21px}
+  .disclaimer .long{display:none}
+  .disclaimer .short{display:inline}
 
-  .disclaimer {
-    font-size: 12.5px;
-    color: var(--muted);
-    text-align: center;
-    padding: 8px 18px 11px;
-    background: white;
-  }
+  /* flex, not grid: as a grid the first track collapsed to 0 and the
+     notice sat on top of the answer */
+  .main{display:flex;flex-direction:column;gap:8px}
+  .main>.disclaimer{flex:none}
+  .main>.chat{flex:1 1 auto;min-height:0}
+  .main>.input-bar,.main>.attach-tray,.main>.error-banner{flex:none}
 
-  .error-banner {
-    background: #FDECEC;
-    border: 1px solid var(--danger);
-    color: var(--danger);
-    font-size: 14.5px;
-    padding: 13px 16px;
-    border-radius: 7px;
-    margin: 0 24px 6px;
-    line-height: 1.5;
-    font-weight: 500;
-  }
+  /* the rail and the detail panel become drawers */
+  #app>.rail{position:fixed;z-index:40;top:0;right:0;bottom:0;width:min(340px,88vw);
+    background:var(--surface);border-radius:var(--r) 0 0 var(--r);padding:12px;overflow:auto;
+    transform:translateX(105%);transition:transform .22s ease;
+    box-shadow:-10px 0 24px -14px rgba(0,0,0,.5)}
+  #app>.rail.open{transform:none}
+  #app>.detail{display:none}
+  #app>.detail.open{display:flex;position:fixed;z-index:40;left:0;right:0;bottom:0;top:auto;
+    max-height:84dvh;background:var(--surface);border-radius:var(--r) var(--r) 0 0;
+    padding:12px;overflow:auto}
+  .scrim{position:fixed;inset:0;z-index:39;background:rgba(0,0,0,.55)}
 
-  /* ── Rich answer formatting (step-by-step guides, fee tables) ─── */
-  /* Scoped to assistant bubbles only — user bubbles are navy, and navy
-     headings on navy would disappear. */
-  .msg.assistant .bubble h4 {
-    font-size: 15px;
-    font-weight: 800;
-    color: var(--maroon);
-    margin: 16px 0 7px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--grid);
-    letter-spacing: 0.01em;
-  }
-  .msg.assistant .bubble h4:first-child { margin-top: 0; }
-  .msg.assistant .bubble ul,
-  .msg.assistant .bubble ol { margin: 7px 0 12px; padding-left: 22px; }
-  .msg.assistant .bubble li { margin-bottom: 6px; line-height: 1.55; }
-  .msg.assistant .bubble li:last-child { margin-bottom: 0; }
-  .msg.assistant .bubble ol { counter-reset: none; }
-  .msg.assistant .bubble ol > li::marker { font-weight: 800; color: var(--maroon); }
-  .msg.assistant .bubble strong { font-weight: 700; color: var(--maroon-deep); }
-  .msg.assistant .bubble table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 8px 0 12px;
-    font-size: 15px;
-    display: block;
-    overflow-x: auto;
-  }
-  .msg.assistant .bubble th,
-  .msg.assistant .bubble td {
-    border: 1px solid var(--grid);
-    padding: 7px 10px;
-    text-align: left;
-    vertical-align: top;
-    line-height: 1.45;
-  }
-  .msg.assistant .bubble th {
-    background: var(--bg);
-    font-weight: 700;
-    color: var(--maroon);
-    white-space: nowrap;
-  }
-  .msg.assistant .bubble a {
-    color: var(--maroon);
-    font-weight: 600;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-    /* long form URLs shouldn't blow out the bubble on a phone */
-    overflow-wrap: anywhere;
-  }
-  .msg.assistant .bubble a:hover { color: var(--maroon-deep); }
+  .parcelbar{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 12px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-s);
+    color:var(--ink);font-size:14px;font-weight:700;text-align:left;flex:none}
+  .parcelbar .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .parcelbar .go{margin-left:auto;color:var(--maroon);font-weight:800;white-space:nowrap}
 
-  /* ── Attachments ──────────────────────────────────────── */
-  .attach-btn {
-    flex-shrink: 0;
-    width: 50px; height: 50px;
-    border: 2px solid var(--grid);
-    border-radius: 8px;
-    background: white;
-    /* a drawn paperclip rather than the emoji: the emoji is a colour glyph, so
-       it ignored the maroon and rendered small, pale and fuzzy */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--maroon);
-    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
-  }
-  /* .input-bar button comes later and is more specific, so it was painting
-     this white and its padding squeezed the icon to nothing — scope past it */
-  .input-bar .attach-btn { padding: 0; background: white; color: var(--maroon); }
-  .input-bar .attach-btn:hover:not(:disabled) { background: var(--tint); color: var(--maroon-deep); }
-  .input-bar .attach-btn:disabled { background: white; }
-  .attach-btn svg { width: 28px; height: 28px; display: block; flex: none; }
-  .attach-btn:hover:not(:disabled) { border-color: var(--maroon); background: var(--tint); color: var(--maroon-deep); }
-  .attach-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-  .attach-tray {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 10px 24px 0;
-    background: white;
-  }
-  .attach-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    background: var(--bg);
-    border: 1px solid var(--grid);
-    border-radius: 6px;
-    padding: 7px 9px 7px 11px;
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--ink);
-    max-width: 300px;
-  }
-  .attach-chip .kind { font-size: 15px; line-height: 1; }
-  .attach-chip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .attach-chip .sz { color: var(--muted); font-weight: 500; font-size: 12.5px; }
-  .attach-chip .rm {
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); font-size: 16px; line-height: 1;
-    padding: 2px 4px; border-radius: 4px;
-  }
-  .attach-chip .rm:hover { color: var(--danger); background: #FDECEC; }
-
-  /* attachments listed inside a sent message */
-  .msg .sent-files { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 9px; }
-  .msg.user .sent-files .f {
-    background: rgba(255,255,255,0.16);
-    border: 1px solid rgba(255,255,255,0.28);
-    color: #fff;
-    border-radius: 5px; padding: 4px 10px; font-size: 13px; font-weight: 600;
-  }
-
-  .chat.dropping {
-    outline: 3px dashed var(--gold);
-    outline-offset: -10px;
-    background: var(--tint);
-  }
-
-  /* ── History ──────────────────────────────────────────── */
-  .strip-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    background: var(--bg);
-    border: 1px solid var(--grid);
-    border-radius: 6px;
-    padding: 9px 15px;
-    font-family: var(--font);
-    font-size: 14.5px;
-    font-weight: 700;
-    color: var(--ink);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s ease;
-  }
-  .strip-btn:hover { border-color: var(--gold); background: var(--tint); }
-  .strip-btn .count-badge {
-    background: var(--maroon);
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-
-  .history-panel {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 24px;
-    right: 24px;
-    max-width: 520px;
-    background: white;
-    border: 1px solid var(--grid);
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    z-index: 25;
-    max-height: 62vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .history-panel .hp-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--grid);
-  }
-  .history-panel .hp-head strong { font-size: 14.5px; color: var(--maroon); }
-  .history-panel .hp-clear {
-    margin-left: auto;
-    background: none;
-    border: none;
-    font-family: var(--font);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--danger);
-    cursor: pointer;
-    padding: 4px 6px;
-  }
-  .history-panel .hp-clear:hover { text-decoration: underline; }
-  .history-panel .hp-list { overflow-y: auto; padding: 8px; }
-  .history-panel .hp-empty {
-    padding: 22px 16px;
-    text-align: center;
-    color: var(--muted);
-    font-size: 14.5px;
-    line-height: 1.55;
-  }
-  .hp-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    padding: 10px 11px;
-    cursor: pointer;
-    font-family: var(--font);
-    transition: background 0.12s ease, border-color 0.12s ease;
-  }
-  .hp-item:hover { background: var(--bg); border-color: var(--grid); }
-  .hp-item.active { background: var(--tint); border-color: var(--gold); }
-  .hp-item .hp-body { flex: 1; min-width: 0; }
-  .hp-item .hp-title {
-    font-size: 14.5px;
-    font-weight: 600;
-    color: var(--ink);
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .hp-item .hp-meta { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
-  .hp-del {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 3px 5px;
-    border-radius: 4px;
-    flex-shrink: 0;
-  }
-  .hp-del:hover { color: var(--danger); background: #FDECEC; }
-
-  ::-webkit-scrollbar { width: 8px; }
-  ::-webkit-scrollbar-thumb { background: var(--grid); border-radius: 8px; }
+  .msg.assistant .bubble{padding:15px 16px}
+  .msg.assistant .bubble p,.msg.assistant .bubble li{font-size:16px}
+  .empty-state{padding:12px 2px}
+  .empty-state h2{font-size:19px}
+  .suggestion-chip{font-size:13.5px}
+  .stage canvas{height:290px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
 <div class="app" id="app"></div>
@@ -1675,6 +1215,7 @@ let kbDropdownOpen = false;
 let historyOpen = false;
 // On a phone the four strip controls live behind one button in the header.
 let toolsOpen = false;
+let detailOpen = false;      // the parcel/diagram drawer, phones only
 // render() used to focus the question box every single time it ran, so opening
 // a menu yanked a phone to the bottom of the page and threw up the keyboard.
 // Focus is now asked for explicitly, and never on a touch screen, where the
@@ -2104,15 +1645,23 @@ function escapeHtml(str) {
 // Only http(s) links are ever turned into anchors, so a model answer can't
 // produce a javascript: or data: link. Input is already HTML-escaped.
 function safeLink(url, label) {
-  if (!/^https?:\/\//i.test(url)) return label;
-  return `<a href="${url}" target="_blank" rel="noopener">${label}</a>`;
+  // A path of our own ("/docs/…") is as safe as an absolute http link and is
+  // how the assistant refers to the documents this app serves. Anything else
+  // — javascript:, data:, a bare word — is left as plain text.
+  const ours = /^\/[A-Za-z0-9._~\-/%?=&#]*$/.test(url);
+  if (!/^https?:\/\//i.test(url) && !ours) return label;
+  const target = ours ? '' : ' target="_blank" rel="noopener"';
+  return `<a href="${url}"${target}>${label}</a>`;
 }
 
 function inlineMd(escaped) {
   return escaped
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    // [label](https://…)
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (m, label, url) => safeLink(url, label))
+    // [label](https://…) and [label](/docs/…)
+    .replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^\s)]+)\)/gi, (m, label, url) => safeLink(url, label))
+    // _emphasis_ and *emphasis*, but never inside a word (file_name_here)
+    .replace(/(^|[\s(])_([^_\n]+)_(?=$|[\s.,;:!?)])/g, '$1<em>$2</em>')
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
     // bare URLs that aren't already inside an href
     .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/gi, (m, pre, url) => {
       const trailing = url.match(/[.,;:]+$/);           // don't swallow sentence punctuation
@@ -2262,6 +1811,22 @@ function render() {
   const forceBottom = scrollToBottomNext;
   scrollToBottomNext = false;
 
+  // the citations of the most recent answer, for the detail column
+  const lastAnswer = [...messages].reverse().find(m => m.role === 'assistant' && !m.streaming);
+  const lastCited = lastAnswer && !declinedAnswer(lastAnswer.content)
+    ? (lastAnswer.shown || lastAnswer.sources || []) : [];
+
+  const citeTag = (s) => {
+    const pages = s.page && s.id
+      ? (s.last && s.last > s.page ? `pages ${s.page}–${s.last}` : `page ${s.page}`) : '';
+    const label = `${escapeHtml(s.source)} — ${escapeHtml(s.section)}`;
+    const url = sourceViewerUrl(s);
+    const inner = `${label}${pages ? `<span class="where">${pages}</span>` : ''}`;
+    return url
+      ? `<a href="${url}" target="_blank" rel="noopener">${inner}</a>`
+      : `<span class="flat">${inner}</span>`;
+  };
+
   app.innerHTML = `
     <div class="header">
       <div class="bell"><svg viewBox="0 0 24 24" width="26" height="26" fill="#751D2C" aria-hidden="true"><path d="M6.5 10h-2v7h2v-7zm6 0h-2v7h2v-7zM2 19h20v2H2v-2zm18.5-9h-2v7h2v-7zM12 3.26 17.21 6H6.79L12 3.26M12 1 2 6v2h20V6L12 1z"/></svg></div>
@@ -2269,169 +1834,217 @@ function render() {
         <div class="eyebrow">Liberty County Building Dept</div>
         <h1>Permit Assistant</h1>
       </div>
-      <div class="badge">${IS_STAFF ? 'Staff mode' : `Informational \u00b7 ${uniqueSources.length} sources`}</div>
-      <button class="tools-toggle ${toolsOpen ? 'open' : ''}" onclick="toggleTools(event)" aria-label="Sources, history and parcel lookup" title="Sources, history and parcel lookup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="badge">${IS_STAFF ? 'Staff mode' : `Informational · ${uniqueSources.length} sources`}</div>
+      <button class="tools-toggle ${toolsOpen ? 'open' : ''}" onclick="toggleTools(event)" aria-label="Sources, history and parcel lookup" aria-expanded="${toolsOpen ? 'true' : 'false'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </div>
-    ${IS_STAFF ? `
-      <div class="disclaimer" style="background:var(--tint);color:var(--maroon);border-bottom:1px solid var(--grid);padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
-        Internal staff assistant \u2014 not the public version.
-        <a href="#" onclick="previewPublic();return false;" style="color:var(--maroon);font-weight:600;">See public version</a> \u00b7
-        <a href="#" onclick="staffLogout();return false;" style="color:var(--maroon);font-weight:600;">Sign out</a>
-      </div>
-    ` : `
-      ${PREVIEWING_PUBLIC ? `
-        <div class="disclaimer" style="background:var(--maroon);color:#fff;padding:8px 18px;font-size:13px;line-height:1.4;text-align:center;">
-          Previewing the public version \u2014 answers use the public guardrails.
-          <a href="#" onclick="returnToStaff();return false;" style="color:var(--tint);font-weight:700;">Back to staff</a>
-        </div>
-      ` : ''}
-      <div class="disclaimer" style="background:var(--tint);color:var(--ink);border-bottom:1px solid var(--grid);padding:9px 18px;font-size:13px;line-height:1.4;text-align:center;">
-        <span class="long">General information from Liberty County Building Department documents \u2014 <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.</span><span class="short"><strong>Not an official determination</strong> \u2014 confirm with the Building Department.</span>
-      </div>
-    `}
-    <div class="sources-strip ${toolsOpen ? 'open' : ''}">
-      <button class="kb-toggle ${kbDropdownOpen ? 'open' : ''}" onclick="toggleKbDropdown(event)">
-        \u{1F4DA} <span class="label-long">Knowledge base</span><span class="label-short">Sources</span> <span class="count-badge">${uniqueSources.length}</span> <span class="chevron">\u25BC</span>
-      </button>
-      ${kbDropdownOpen ? `
-        <div class="kb-dropdown">
-          ${uniqueSources.map(s => {
-            const url = DOC_LINKS[s];
-            const inner = `<span class="dot"></span>${escapeHtml(s)}${url ? '<span class="chip-arrow">\u2197</span>' : ''}`;
-            return url
-              ? `<a class="doc-chip" href="${url}" target="_blank" rel="noopener">${inner}</a>`
-              : `<span class="doc-chip">${inner}</span>`;
-          }).join('')}
-        </div>
-      ` : ''}
-      <button class="strip-btn" onclick="toggleHistory(event)" title="Past questions saved on this device">
-        \u{1F553} History${conversations.length ? ` <span class="count-badge">${conversations.length}</span>` : ''}
-      </button>
-      ${messages.length ? `<button class="strip-btn" onclick="newConversation()" title="Start a new conversation">+ New</button>` : ''}
-      ${historyOpen ? `
-        <div class="history-panel" onclick="event.stopPropagation()">
-          <div class="hp-head">
-            <strong>Saved on this device</strong>
-            ${conversations.length ? `<button class="hp-clear" onclick="clearHistory()">Clear all</button>` : ''}
+
+    <aside class="rail ${toolsOpen ? 'open' : ''}">
+      <div class="card"><div class="cbody sources-strip">
+        <button class="kb-toggle ${kbDropdownOpen ? 'open' : ''}" onclick="toggleKbDropdown(event)">
+          <span class="label-long">Knowledge base</span><span class="label-short">Sources</span>
+          <span class="count-badge">${uniqueSources.length}</span> <span class="chevron">▼</span>
+        </button>
+        ${kbDropdownOpen ? `
+          <div class="kb-dropdown">
+            ${uniqueSources.map(s => {
+              const url = DOC_LINKS[s];
+              const inner = `<span class="dot"></span>${escapeHtml(s)}${url ? '<span class="chip-arrow">↗</span>' : ''}`;
+              return url
+                ? `<a class="doc-chip" href="${url}" target="_blank" rel="noopener">${inner}</a>`
+                : `<span class="doc-chip">${inner}</span>`;
+            }).join('')}
           </div>
-          ${conversations.length ? `
-            <div class="hp-list">
-              ${conversations.map(c => `
-                <div class="hp-item ${c.id === activeId ? 'active' : ''}" onclick="openConversation('${c.id}')">
-                  <div class="hp-body">
-                    <div class="hp-title">${escapeHtml(c.title || conversationTitle(c.messages))}</div>
-                    <div class="hp-meta">${escapeHtml(relativeTime(c.updated || c.ts))} \u00B7 ${c.messages.filter(m => m.role === 'user').length} question${c.messages.filter(m => m.role === 'user').length === 1 ? '' : 's'}</div>
-                  </div>
-                  <button class="hp-del" title="Delete this conversation" onclick="deleteConversation('${c.id}', event)">\u00D7</button>
-                </div>
-              `).join('')}
+        ` : ''}
+        <button class="strip-btn" onclick="toggleHistory(event)" title="Past questions saved on this device">
+          History${conversations.length ? ` <span class="count-badge">${conversations.length}</span>` : ''}
+        </button>
+        ${historyOpen ? `
+          <div class="history-panel" onclick="event.stopPropagation()">
+            <div class="hp-head">
+              <strong>Saved on this device</strong>
+              ${conversations.length ? `<button class="hp-clear" onclick="clearHistory()">Clear all</button>` : ''}
             </div>
-          ` : `
-            <div class="hp-empty">No saved conversations yet.<br>Questions you ask are kept here on this device so you can come back to them.</div>
-          `}
-        </div>
-      ` : ''}
-      <a class="parcel-link" href="https://qpublic.schneidercorp.com/Application.aspx?App=LibertyCountyFL&Layer=Parcels&PageType=Search" target="_blank" rel="noopener">
-        \u{1F5FA}\uFE0F <span class="label-long">Look up a parcel</span><span class="label-short">Parcel</span>
-      </a>
-    </div>
-    ${activeParcel ? `
-      <div class="parcel-bar">
-        <div class="pb-main">
-          <span class="pb-tag">On the counter</span>
-          <span class="pb-id">${escapeHtml(activeParcel.id)}</span>
-          <span class="pb-detail">${escapeHtml([activeParcel.own, [activeParcel.adr, activeParcel.cty].filter(Boolean).join(', '),
-            activeParcel.acres ? acresText(activeParcel) : '',
-            activeParcel.bld ? `${activeParcel.bld} building${activeParcel.bld === 1 ? '' : 's'}` : 'unimproved',
-            parcelUseLabel(activeParcel).label].filter(Boolean).join('  \u00B7  '))}</span>
-        </div>
-        <div class="pb-flu">
-          <label for="fluPick">Future land use</label>
-          <select id="fluPick" onchange="setParcelFlu(this.value)">
-            <option value="">not set — read it off the map</option>
-            ${Object.keys(FLU_CATEGORIES).map(c => `<option value="${escapeHtml(c)}"${activeParcel.flu === c ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('')}
-          </select>
-          <a href="/docs/future-land-use-map.pdf" target="_blank" rel="noopener" title="Open the Future Land Use Map">Open map</a>
-        </div>
-        <button class="pb-clear" onclick="clearActiveParcel()" title="Stop answering for this parcel">Clear</button>
-      </div>
-    ` : ''}
-    <div class="chat" id="chatArea">
-      ${messages.length === 0 ? `
-        <div class="empty-state">
-          <div class="icon">\u{1F4DA}</div>
-          <h2>Ask about permits, fees, or forms</h2>
-          <p>Answers only from the Building Department Guide, the Permit Eligibility Guide, the Comprehensive Plan, the Land Development Code, the Fee Schedule, and the HB 803 memo. Ask about a whole project — "what are the steps and permits for building a pole barn house?" — to get a step-by-step walkthrough with an estimated fee breakdown. Type a parcel number — or an owner's last name or a road name — to pull the property up from the Liberty County tax roll, then keep asking and every answer applies to that parcel.</p>
-          <div class="suggestion-row">
-            ${SUGGESTIONS.map(s => `<button class="suggestion-chip" onclick="askSuggestion(this)">${escapeHtml(s)}</button>`).join('')}
-          </div>
-        </div>
-      ` : messages.map(m => `
-        <div class="msg ${m.role}">
-          <div class="avatar">${m.role === 'user' ? 'You' : 'AI'}</div>
-          <div class="bubble"${m.streaming ? ' id="streamingBubble"' : ''}>
-            ${m.files && m.files.length ? `
-              <div class="sent-files">
-                ${m.files.map(f => `<span class="f">${f.kind === 'document' ? '\u{1F4C4}' : '\u{1F5BC}\uFE0F'} ${escapeHtml(f.name)}</span>`).join('')}
+            ${conversations.length ? `
+              <div class="hp-list">
+                ${conversations.map(c => `
+                  <div class="hp-item ${c.id === activeId ? 'active' : ''}" onclick="openConversation('${c.id}')">
+                    <div class="hp-body">
+                      <div class="hp-title">${escapeHtml(c.title || conversationTitle(c.messages))}</div>
+                      <div class="hp-meta">${escapeHtml(relativeTime(c.updated || c.ts))} · ${c.messages.filter(m => m.role === 'user').length} question${c.messages.filter(m => m.role === 'user').length === 1 ? '' : 's'}</div>
+                    </div>
+                    <button class="hp-del" title="Delete this conversation" onclick="deleteConversation('${c.id}', event)">×</button>
+                  </div>
+                `).join('')}
               </div>
-            ` : ''}
-            ${m.replay ? `<div class="sent-files"><span class="f">\u{21BB} asked again with future land use: ${escapeHtml(m.replay)}</span></div>` : ''}
-            ${m.streaming && !m.content
-              ? '<div class="typing"><span></span><span></span><span></span></div>'
-              : formatBubble(m.content, m.sources)}
-            ${(() => {
-              // conversations saved before this have no `shown`, so they render as before
-              const cited = declinedAnswer(m.content) ? [] : (m.shown || m.sources || []);
-              return cited.length && !m.streaming ? `
-              <details class="sources-used"${window.innerWidth <= 700 ? '' : ' open'}>
-                <summary>${cited.length} source${cited.length === 1 ? '' : 's'}</summary>
-                ${cited.map(s => {
-                  // a passage that runs over a page break says both pages, so the
-                  // reader is not surprised to find the rule on the second one
-                  const pages = s.last && s.last > s.page ? `, pp. ${s.page}\u2013${s.last}` : `, p. ${s.page}`;
-                  const label = `${escapeHtml(s.source)} \u2014 ${escapeHtml(s.section)}${s.page && s.id ? pages : ''}`;
-                  const url = sourceViewerUrl(s);
-                  return url
-                    ? `<a class="citation-tag" href="${url}" target="_blank" rel="noopener">${label}</a>`
-                    : `<span class="citation-tag">${label}</span>`;
-                }).join('')}
-              </details>
-            ` : '';
-            })()}
+            ` : `
+              <div class="hp-empty">No saved conversations yet.<br>Questions you ask are kept here on this device so you can come back to them.</div>
+            `}
+          </div>
+        ` : ''}
+        ${messages.length ? `<button class="strip-btn" onclick="newConversation()" title="Start a new conversation">+ New question</button>` : ''}
+        <a class="parcel-link" href="https://qpublic.schneidercorp.com/Application.aspx?App=LibertyCountyFL&Layer=Parcels&PageType=Search" target="_blank" rel="noopener">
+          <span class="label-long">Look up a parcel</span><span class="label-short">Parcel</span>
+        </a>
+      </div></div>
+      <p class="rail-note">Answers come from Liberty County Building Department documents for general guidance. For an official determination on any permit, fee or code question, contact the Building Department.</p>
+    </aside>
+
+    <main class="main">
+      ${IS_STAFF ? `
+        <div class="disclaimer">
+          <span class="long">Internal staff assistant — not the public version.</span><span class="short">Staff</span>
+          <a href="#" onclick="previewPublic();return false;">See public version</a> ·
+          <a href="#" onclick="staffLogout();return false;">Sign out</a>
+        </div>
+      ` : `
+        ${PREVIEWING_PUBLIC ? `
+          <div class="disclaimer" style="background:var(--maroon);color:#fff;border-color:var(--maroon)">
+            Previewing the public version — answers use the public guardrails.
+            <a href="#" onclick="returnToStaff();return false;" style="color:var(--tint)">Back to staff</a>
+          </div>
+        ` : ''}
+        <div class="disclaimer">
+          <span class="long">General information from Liberty County Building Department documents — <strong>not an official determination</strong>. Please confirm any permit, fee, or code question with the Building Department before acting.</span><span class="short"><strong>Not an official determination</strong> — confirm with the Building Department.</span>
+        </div>
+      `}
+
+      ${activeParcel ? `
+        <button class="parcelbar" type="button" onclick="toggleDetail(event)">
+          <span class="n">${escapeHtml(activeParcel.id)}</span>
+          <span class="go">${activeParcel.acres > 0 ? 'Site diagram' : 'Parcel'} ›</span>
+        </button>
+      ` : ''}
+      <div class="chat" id="chatArea">
+        ${messages.length === 0 ? `
+          <div class="empty-state">
+            <div class="icon"></div>
+            <h2>Ask about permits, fees, or forms</h2>
+            <p>Answers come only from the Building Department Guide, the Permit Eligibility Guide, the Comprehensive Plan, the Land Development Code, the Fee Schedule and the HB 803 memo. Ask about a whole project — "what are the steps and permits for building a pole barn house?" — for a step-by-step walkthrough with an estimated fee breakdown. Type a parcel number, an owner's last name or a road name to pull the property up from the tax roll; every answer after that applies to that parcel.</p>
+            <div class="suggestion-row">
+              ${SUGGESTIONS.map(s => `<button class="suggestion-chip" onclick="askSuggestion(this)">${escapeHtml(s)}</button>`).join('')}
+            </div>
+          </div>
+        ` : messages.map(m => `
+          <div class="msg ${m.role}">
+            <div class="avatar">${m.role === 'user' ? 'You' : 'AI'}</div>
+            <div class="bubble"${m.streaming ? ' id="streamingBubble"' : ''}>
+              ${m.files && m.files.length ? `
+                <div class="sent-files">
+                  ${m.files.map(f => `<span class="f">${escapeHtml(f.name)}</span>`).join('')}
+                </div>
+              ` : ''}
+              ${m.replay ? `<div class="sent-files"><span class="f">asked again with future land use: ${escapeHtml(m.replay)}</span></div>` : ''}
+              ${m.streaming && !m.content
+                ? '<div class="typing"><span></span><span></span><span></span></div>'
+                : formatBubble(m.content, m.sources)}
+              ${(() => {
+                // conversations saved before this have no `shown`, so they render as before
+                const cited = declinedAnswer(m.content) ? [] : (m.shown || m.sources || []);
+                return cited.length && !m.streaming ? `
+                <details class="sources-used">
+                  <summary>${cited.length} source${cited.length === 1 ? '' : 's'}</summary>
+                  ${cited.map(s => {
+                    // a passage that runs over a page break says both pages, so the
+                    // reader is not surprised to find the rule on the second one
+                    const pages = s.last && s.last > s.page ? `, pp. ${s.page}–${s.last}` : `, p. ${s.page}`;
+                    const label = `${escapeHtml(s.source)} — ${escapeHtml(s.section)}${s.page && s.id ? pages : ''}`;
+                    const url = sourceViewerUrl(s);
+                    return url
+                      ? `<a class="citation-tag" href="${url}" target="_blank" rel="noopener">${label}</a>`
+                      : `<span class="citation-tag">${label}</span>`;
+                  }).join('')}
+                </details>
+              ` : '';
+              })()}
+            </div>
+          </div>
+        `).join('')}
+        ${isLoading && !messages.some(m => m.streaming) ? `
+          <div class="msg assistant">
+            <div class="avatar">AI</div>
+            <div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>
+          </div>
+        ` : ''}
+      </div>
+
+      ${lastError ? `<div class="error-banner">${escapeHtml(lastError)}</div>` : ''}
+      ${UPLOADS_ENABLED && pendingAttachments.length ? `
+        <div class="attach-tray">
+          ${pendingAttachments.map((a, i) => `
+            <span class="attach-chip">
+              <span class="nm" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</span>
+              <span class="sz">${formatBytes(a.size)}</span>
+              <button class="rm" title="Remove" onclick="removeAttachment(${i})">×</button>
+            </span>
+          `).join('')}
+        </div>
+      ` : ''}
+      <div class="input-bar">
+        ${UPLOADS_ENABLED ? `
+          <input type="file" id="fileInput" multiple accept=".pdf,image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleFilePick(event)">
+          <button class="attach-btn" title="Attach a PDF or picture" aria-label="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+        ` : ''}
+        <textarea id="questionInput" rows="1" placeholder="${window.innerWidth <= 779
+          ? 'Ask, or type a parcel number'
+          : (UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number, owner or road...' : 'Ask a question, or type a parcel number, owner name or road...')}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
+        <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking…' : 'Ask'}</button>
+      </div>
+    </main>
+
+    <aside class="detail ${detailOpen ? 'open' : ''}" id="detailCol">
+      ${activeParcel ? `
+        <div class="card">
+          <h2>Parcel on the counter</h2>
+          <div class="cbody parcel-bar">
+            <div>
+              <span class="pb-tag">From the tax roll</span>
+              <div class="pb-id">${escapeHtml(activeParcel.id)}</div>
+            </div>
+            <div class="pb-detail">${escapeHtml([activeParcel.own, [activeParcel.adr, activeParcel.cty].filter(Boolean).join(', '),
+              activeParcel.acres ? acresText(activeParcel) : '',
+              activeParcel.bld ? `${activeParcel.bld} building${activeParcel.bld === 1 ? '' : 's'}` : 'unimproved',
+              parcelUseLabel(activeParcel).label].filter(Boolean).join('  ·  '))}</div>
+            <div class="pb-flu">
+              <label for="fluPick">Future land use</label>
+              <select id="fluPick" onchange="setParcelFlu(this.value)">
+                <option value="">not set — read it off the map</option>
+                ${Object.keys(FLU_CATEGORIES).map(c => `<option value="${escapeHtml(c)}"${activeParcel.flu === c ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('')}
+              </select>
+              <a href="/docs/future-land-use-map.pdf" target="_blank" rel="noopener">Open map</a>
+            </div>
+            <button class="pb-clear" onclick="clearActiveParcel()" title="Stop answering for this parcel">Clear parcel</button>
           </div>
         </div>
-      `).join('')}
-      ${isLoading && !messages.some(m => m.streaming) ? `
-        <div class="msg assistant">
-          <div class="avatar">AI</div>
-          <div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>
+        ${activeParcel.acres > 0 ? `
+          <div class="card">
+            <h2>Site diagram — to scale</h2>
+            <div class="cbody">
+              <div class="stage"><canvas id="siteCanvas"></canvas><span class="hint">Drag to turn · scroll to zoom</span></div>
+              <div class="legend">
+                <span><i style="background:#EDE7D2;border:1px solid #8C7B3F"></i>Lot, ${escapeHtml(acresText(activeParcel))}</span>
+                <span><i style="background:#FFFFFF;border:1px solid #8C3444"></i>Buildable</span>
+                ${activeParcel.liv ? '<span><i style="background:#751D2C"></i>Building</span>' : ''}
+                <span><i style="background:#2E6E8E"></i>200 ft well radius</span>
+              </div>
+              <p class="note" id="siteNote"></p>
+            </div>
+          </div>
+        ` : ''}
+      ` : `
+        <div class="card">
+          <h2>Parcel on the counter</h2>
+          <div class="cbody"><p class="empty-detail">No parcel loaded. Type a parcel number, an owner's last name or a road name in the box and every answer after that applies to that property — with a diagram of the lot, its setbacks and the well radius.</p></div>
         </div>
-      ` : ''}
-    </div>
-    ${lastError ? `<div class="error-banner">${escapeHtml(lastError)}</div>` : ''}
-    ${UPLOADS_ENABLED && pendingAttachments.length ? `
-      <div class="attach-tray">
-        ${pendingAttachments.map((a, i) => `
-          <span class="attach-chip">
-            <span class="kind">${a.kind === 'document' ? '\u{1F4C4}' : '\u{1F5BC}\uFE0F'}</span>
-            <span class="nm" title="${escapeHtml(a.name)}">${escapeHtml(a.name)}</span>
-            <span class="sz">${formatBytes(a.size)}</span>
-            <button class="rm" title="Remove" onclick="removeAttachment(${i})">\u00D7</button>
-          </span>
-        `).join('')}
+      `}
+      <div class="card">
+        <h2>Where the last answer came from</h2>
+        <div class="cbody">
+          ${lastCited.length
+            ? `<div class="srcs">${lastCited.map(citeTag).join('')}</div>`
+            : `<p class="empty-detail">Sources appear here once an answer uses them. Each one opens the exact page with the passage highlighted.</p>`}
+        </div>
       </div>
-    ` : ''}
-    <div class="input-bar">
-      ${UPLOADS_ENABLED ? `
-        <input type="file" id="fileInput" multiple accept=".pdf,image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleFilePick(event)">
-        <button class="attach-btn" title="Attach a PDF or picture" aria-label="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
-      ` : ''}
-      <textarea id="questionInput" rows="1" placeholder="${window.innerWidth <= 700
-        ? 'Ask, or type a parcel number'
-        : (UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number, owner or road...' : 'Ask a question, or type a parcel number, owner name or road...')}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
-      <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking\u2026' : 'Ask'}</button>
-    </div>
-    <div class="disclaimer foot-notice">Answers are drawn from Liberty County Building Department documents for general guidance only. For an official determination on any permit, fee, or code question, contact the Building Department directly.</div>
+    </aside>
   `;
 
   const chatArea = document.getElementById('chatArea');
@@ -2444,10 +2057,31 @@ function render() {
   const input = document.getElementById('questionInput');
   if (input && focusInputNext && !isTouch) input.focus();
   focusInputNext = false;
+
+  // one scrim behind whichever drawer is open, on phones only
+  if ((toolsOpen || detailOpen) && window.innerWidth <= 779) {
+    const scrim = document.createElement('div');
+    scrim.className = 'scrim';
+    scrim.onclick = () => { toolsOpen = false; detailOpen = false; render(); };
+    app.appendChild(scrim);
+  }
+
+  // the diagram and the smooth scroll live in a module script; they attach
+  // themselves to window and are simply absent if that module failed to load
+  if (window.siteDiagram) window.siteDiagram.sync(activeParcel);
+  if (window.smoothThread) window.smoothThread.attach(chatArea);
+}
+
+function toggleDetail(e) {
+  if (e) e.stopPropagation();
+  detailOpen = !detailOpen;
+  toolsOpen = false;
+  render();
 }
 
 function toggleTools(e) {
   if (e) e.stopPropagation();
+  detailOpen = false;
   toolsOpen = !toolsOpen;
   if (!toolsOpen) { kbDropdownOpen = false; historyOpen = false; }
   render();
@@ -2462,10 +2096,13 @@ function toggleKbDropdown(e) {
 
 // Close the dropdown / history panel if the user clicks anywhere outside them
 document.addEventListener('click', (e) => {
-  if (!kbDropdownOpen && !historyOpen && !toolsOpen) return;
+  if (!kbDropdownOpen && !historyOpen && !toolsOpen && !detailOpen) return;
   if (e.target.closest('.kb-toggle') || e.target.closest('.kb-dropdown') ||
       e.target.closest('.strip-btn') || e.target.closest('.history-panel') ||
-      e.target.closest('.tools-toggle') || e.target.closest('.sources-strip')) return;
+      e.target.closest('.tools-toggle') || e.target.closest('.sources-strip') ||
+      e.target.closest('.rail') || e.target.closest('.detail') ||
+      e.target.closest('.parcelbar')) return;
+  detailOpen = false;
   kbDropdownOpen = false;
   historyOpen = false;
   toolsOpen = false;
@@ -2806,19 +2443,13 @@ function renderStaffLogin(errMsg) {
         <h1>Staff Sign-In</h1>
       </div>
     </div>
-    <div style="max-width:360px;margin:56px auto;padding:0 24px;text-align:center;">
-      <p style="color:#555;font-size:15px;line-height:1.5;margin-bottom:18px;">
-        Enter the office password to use the internal staff assistant.
-      </p>
-      ${errMsg ? `<div class="error-banner" style="margin-bottom:14px;">${escapeHtml(errMsg)}</div>` : ''}
+    <div class="signin">
+      <p>Enter the office password to use the internal staff assistant.</p>
+      ${errMsg ? `<div class="error-banner" style="margin-bottom:14px">${escapeHtml(errMsg)}</div>` : ''}
       <input id="staffPw" type="password" placeholder="Office password" autocomplete="current-password"
-        onkeydown="if(event.key==='Enter')staffLogin()"
-        style="width:100%;padding:12px 14px;font-size:15px;border:1px solid var(--grid);border-radius:0;box-sizing:border-box;" />
-      <button onclick="staffLogin()"
-        style="width:100%;margin-top:12px;padding:12px;font:600 15px/1 var(--font,sans-serif);color:#fff;background:var(--maroon);border:0;border-radius:0;cursor:pointer;">
-        Sign in
-      </button>
-      <p style="margin-top:20px;font-size:13px;"><a href="/" style="color:var(--maroon);">Continue to the public version →</a></p>
+        onkeydown="if(event.key==='Enter')staffLogin()" />
+      <button onclick="staffLogin()">Sign in</button>
+      <p style="margin-top:20px;font-size:13.5px"><a href="/" style="color:var(--maroon);font-weight:700">Continue to the public version →</a></p>
     </div>`;
   const el = document.getElementById('staffPw');
   if (el) el.focus();
@@ -2907,5 +2538,220 @@ init();
 })();
 </script>
 
+<script type="module">
+/* ══════════════════════════════════════════════════════════════════
+   The site diagram, and the easing on the answer column.
+
+   Kept in a module of its own, separate from the app's main script, for
+   two reasons: the main script is a classic script that the regression
+   suites load into a sandbox, and a top-level import would break every
+   one of them; and if this module ever fails to load, the tool carries
+   on working without a diagram instead of going down with it.
+
+   Why 3D is here at all (directive 2.10 — no 3D unless it does a real
+   job): "20 feet from the line" and "200 feet from the well" are numbers
+   nobody can picture. Drawn against each other at one scale, a 200 ft
+   radius visibly swallows a one-acre lot, which is the whole of the
+   Plan-versus-Code wellhead problem in a single glance.
+   ══════════════════════════════════════════════════════════════════ */
+import * as THREE from '/vendor/three.module.js';
+import Lenis from '/vendor/lenis.mjs';
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── the answer column eases instead of jumping ─────────────────────
+   This is the whole motion budget for a work tool. Nothing else on the
+   page animates, and under reduced motion nothing here runs at all. */
+window.smoothThread = (() => {
+  let lenis = null, attached = null;
+  return {
+    attach(el) {
+      if (reduced || !el || el === attached) return;
+      if (lenis) { lenis.destroy(); lenis = null; }
+      attached = el;
+      lenis = new Lenis({ wrapper: el, content: el, duration: 0.7 });
+      const raf = (t) => { if (lenis) { lenis.raf(t); requestAnimationFrame(raf); } };
+      requestAnimationFrame(raf);
+    },
+  };
+})();
+
+/* ── the diagram ─────────────────────────────────────────────────── */
+window.siteDiagram = (() => {
+  const SQFT_PER_ACRE = 43560;
+  const SETBACK = 20;          // Residential (Low Density), all four yards
+  const WELL_RADIUS = 200;     // the zone of exclusion in the Code
+
+  let renderer, scene, camera, canvas, ro;
+  let yaw = -0.62, pitch = 0.92, dist = 500;
+  let drawnFor = null;
+
+  const draw = () => { if (renderer) renderer.render(scene, camera); };
+
+  function place() {
+    camera.position.set(
+      dist * Math.sin(pitch) * Math.sin(yaw),
+      dist * Math.cos(pitch),
+      dist * Math.sin(pitch) * Math.cos(yaw));
+    camera.lookAt(0, 0, 0);
+  }
+
+  function fit() {
+    if (!canvas) return;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    place(); draw();
+  }
+
+  function build(parcel) {
+    const acres = Number(parcel.acres) || 0;
+    const side = Math.sqrt(acres * SQFT_PER_ACRE);        // a square of the recorded area
+    const inner = Math.max(side - SETBACK * 2, 0);
+    const living = Number(parcel.liv) || 0;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color('#F6F3E7');
+    scene.add(new THREE.HemisphereLight('#ffffff', '#cfc9b4', 2.1));
+    const sun = new THREE.DirectionalLight('#ffffff', 1.5);
+    sun.position.set(-160, 260, 120);
+    scene.add(sun);
+
+    const flat = (geo, color, y, opacity) => {
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color, transparent: opacity !== undefined, opacity: opacity ?? 1, side: THREE.DoubleSide,
+      }));
+      m.rotation.x = -Math.PI / 2; m.position.y = y; scene.add(m); return m;
+    };
+    const outline = (w, d, color, y) => {
+      const h = w / 2, k = d / 2;
+      scene.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(-h, y, -k), new THREE.Vector3(h, y, -k),
+          new THREE.Vector3(h, y, k), new THREE.Vector3(-h, y, k), new THREE.Vector3(-h, y, -k)]),
+        new THREE.LineBasicMaterial({ color })));
+    };
+
+    // The well sits a quarter of the way in from a corner — its true
+    // position is not on the tax roll, and the note under the diagram says
+    // so. The radius is measured FROM THE WELL, so it is centred there and
+    // not on the lot; on a lot this size that difference decides which
+    // corners can be built on.
+    const wellAt = { x: side * 0.25, z: -side * 0.17 };
+
+    const disc = flat(new THREE.CircleGeometry(WELL_RADIUS, 96), '#2E6E8E', 0.1, 0.22);
+    disc.position.set(wellAt.x, 0.1, wellAt.z);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(WELL_RADIUS - 1.4, WELL_RADIUS, 96),
+      new THREE.MeshBasicMaterial({ color: '#2E6E8E' }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(wellAt.x, 0.2, wellAt.z);
+    scene.add(ring);
+
+    flat(new THREE.PlaneGeometry(side, side), '#EDE7D2', 0.3);
+    outline(side, side, '#8C7B3F', 0.5);
+    if (inner > 0) {
+      flat(new THREE.PlaneGeometry(inner, inner), '#FFFFFF', 0.4);
+      outline(inner, inner, '#8C3444', 0.6);
+    }
+
+    const cells = Math.max(2, Math.round(side / 20));     // a 20 ft grid to read scale by
+    const grid = new THREE.GridHelper(side, cells, '#C9C1A6', '#DCD6C2');
+    grid.position.y = 0.35; scene.add(grid);
+
+    if (living > 0) {
+      const w = Math.sqrt(living * 1.45), d = living / w;   // a plausible rectangle of the recorded area
+      const house = new THREE.Mesh(new THREE.BoxGeometry(w, 11, d),
+        new THREE.MeshLambertMaterial({ color: '#751D2C' }));
+      house.position.set(-side * 0.1, 5.9, side * 0.12);
+      scene.add(house);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(w * 0.78, 7, 4),
+        new THREE.MeshLambertMaterial({ color: '#5E1723' }));
+      roof.position.set(house.position.x, 14.9, house.position.z);
+      roof.rotation.y = Math.PI / 4;
+      scene.add(roof);
+    }
+
+    const well = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 16, 20),
+      new THREE.MeshLambertMaterial({ color: '#2E6E8E' }));
+    well.position.set(wellAt.x, 8, wellAt.z);
+    scene.add(well);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(5, 18, 14),
+      new THREE.MeshLambertMaterial({ color: '#1F4F68' }));
+    cap.position.set(wellAt.x, 17, wellAt.z);
+    scene.add(cap);
+
+    dist = Math.max(360, side * 2.4);
+    camera = new THREE.PerspectiveCamera(42, 1, 1, 6000);
+    place();
+
+    // every figure under the diagram says where it came from
+    const note = document.getElementById('siteNote');
+    if (note) {
+      const buildable = Math.round(inner * inner);
+      const radiusAcres = (Math.PI * WELL_RADIUS * WELL_RADIUS / SQFT_PER_ACRE).toFixed(1);
+      note.textContent =
+        `Lot drawn as a square of the ${typeof acresText === 'function' ? acresText(parcel) : acres + ' acres'} on the tax roll — the roll carries area, `
+        + `not dimensions, so the shape and the position of the house and well are approximate. `
+        + `The 20 ft setbacks and the 200 ft radius are to scale: ${buildable.toLocaleString()} sq ft `
+        + `buildable inside the setbacks, against ${radiusAcres} acres covered by the radius.`;
+    }
+  }
+
+  function wire() {
+    let dragging = false, lastX = 0, lastY = 0;
+    canvas.addEventListener('pointerdown', (e) => {
+      dragging = true; lastX = e.clientX; lastY = e.clientY; canvas.setPointerCapture(e.pointerId);
+    });
+    const stop = (e) => { dragging = false; try { canvas.releasePointerCapture(e.pointerId); } catch (_) {} };
+    canvas.addEventListener('pointerup', stop);
+    canvas.addEventListener('pointercancel', stop);
+    canvas.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      yaw -= (e.clientX - lastX) * 0.006;
+      pitch = Math.min(1.45, Math.max(0.22, pitch - (e.clientY - lastY) * 0.005));
+      lastX = e.clientX; lastY = e.clientY; place(); draw();
+    });
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      dist = Math.min(dist * 2.4, Math.max(dist * 0.4, dist + e.deltaY * 0.8));
+      place(); draw();
+    }, { passive: false });
+  }
+
+  return {
+    sync(parcel) {
+      const el = document.getElementById('siteCanvas');
+      if (!el || !parcel || !(Number(parcel.acres) > 0)) {
+        drawnFor = null;
+        if (ro) { ro.disconnect(); ro = null; }
+        return;
+      }
+      // render() replaces the DOM, so the canvas is a new element each time
+      const sameParcel = drawnFor === parcel.id;
+      canvas = el;
+      if (!renderer || renderer.domElement !== canvas) {
+        if (renderer) renderer.dispose();
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        wire();
+      }
+      if (!sameParcel || !scene) {
+        yaw = -0.62; pitch = 0.92;
+        build(parcel);
+        drawnFor = parcel.id;
+      } else {
+        build(parcel);          // the DOM was replaced; the note needs rewriting
+      }
+      if (ro) ro.disconnect();
+      ro = new ResizeObserver(fit);
+      ro.observe(canvas);
+      fit();
+    },
+  };
+})();
+</script>
 </body>
 </html>
