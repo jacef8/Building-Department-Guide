@@ -137,6 +137,14 @@ const phonePlaceholder = (afterTernary.match(/\?\s*'([^']*)'/) || [])[1];
 ok(phonePlaceholder && phonePlaceholder.length <= 25,
    `the phone placeholder is ${phonePlaceholder ? phonePlaceholder.length : '?'} characters; over 25 it wraps and clips`);
 
+// The answer column must be the piece that takes the leftover height. As a
+// two-row grid with three or more children, the NOTICE took the 1fr row and
+// stood 269px tall with the answer pushed under it and overlapping.
+ok(ruleBody('.main').includes('display:flex'),
+   'the main column must be flex, or an extra child steals the answer row');
+ok(ruleBody('.main>.chat').includes('flex:1 1 auto'),
+   'the answer column is not the piece that takes the leftover height');
+
 // directive 2.1: no glow or haze anywhere
 ok(!/text-shadow/.test(css), 'text-shadow is on the rejected list');
 ok(!/backdrop-filter/.test(css), 'backdrop-filter is on the rejected list');
