@@ -10,8 +10,19 @@
 // out of package.json keeps it out of the deploy build.
 const fs = require('fs');
 const path = require('path');
+// pdfjs must be required BEFORE pdf-parse. pdf-parse bundles its own older
+// pdfjs, and whichever loads first claims the worker in the ESM module cache -
+// load it second and every getDocument() here dies on a version mismatch, which
+// the type-size pass swallows, which turns body sentences into section headings.
+// Use the pdfjs that pdf-parse bundles, not the top-level one. Two copies are
+// installed at different versions, and the first PDFParse call claims the ESM
+// worker for its own - after which every getDocument() from the other copy dies
+// on a version mismatch. The type-size pass swallows that error, so the only
+// symptom is body sentences turning up as section headings in citations.
+// Resolving it from pdf-parse keeps one engine in play and the versions equal.
+const pdfjs = require(path.join(
+  __dirname, '..', 'node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/build/pdf.mjs'));
 const { PDFParse } = require('pdf-parse');
-const pdfjs = require('pdfjs-dist/legacy/build/pdf.mjs');
 
 const DOCS = __dirname.replace(/\\/g, '/').replace(/\/scripts$/, '') + '/public/docs';
 const OUT = DOCS + '/reference-index.json';
@@ -24,11 +35,10 @@ const SOURCES = [
   { file: `${PZ}/LIBERTY-COUNTY-Land-Development-Code 2017.pdf`, source: 'Land Development Code' },
   { file: `${PZ}/Liberty-County-2012-2025-Comp-Plan.pdf`,        source: 'Comprehensive Plan' },
   { file: `${DOCS}/2026-fee-schedule.pdf`,                       source: '2026 Fee Schedule' },
-  { file: `${DOCS}/building-department-guide.pdf`,               source: 'Building Guide' },
-  { file: `${DOCS}/permit-eligibility-guide-2026.pdf`,           source: 'Permit Eligibility Guide' },
-  { file: `${DOCS}/permit-coverage-reference.pdf`,               source: 'Permit Coverage Reference' },
-  { file: `${DOCS}/permit-exemption-quick-reference.pdf`,        source: 'Permit Exemption Quick Reference' },
-  { file: `${DOCS}/planning-zoning-flow-chart.pdf`,              source: 'Planning & Zoning Flow Chart' },
+  // One document in place of five. The guides it replaces are in the county's
+  // Archive folder; they stated the same rules in five different wordings, and
+  // four of them carried setback and acreage figures that were wrong.
+  { file: `${DOCS}/permit-desk-reference.pdf`,                   source: 'Permit Desk Reference' },
   { file: `${DOCS}/written-request-for-exemption-hb803.pdf`,     source: 'Exemption Form' },
   { file: `${DOCS}/building-fee-resolution-2026.pdf`,            source: 'Fee Resolution 2026' },
   { file: `${DOCS}/dbpr-license-abbreviations.pdf`,              source: 'DBPR License Abbreviations' },

@@ -168,8 +168,8 @@ for (const [q, re, label] of KNOWN) {
 // the question that could not be answered at all before the curated entry
 {
   const h = hits('how do i know if i need a permit');
-  ok(h.chunks.some(c => /Do I need a permit/i.test(c.section || '')),
-     'the "Do I need a permit?" entry no longer ranks');
+  ok(/does the work need a permit|do i need a permit/i.test(h.chunks[0].section || ''),
+     'the "do I need a permit?" material no longer ranks first');
 }
 
 // ── 2b. setbacks, asked the way staff ask ───────────────────────────
@@ -261,9 +261,26 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
   ok(dup === 0, `${dup} duplicate passages in the index`);
   ok(index.some(c => c.source === 'Land Development Code') &&
      index.some(c => c.source === 'Comprehensive Plan'), 'the Code or the Plan is missing');
-  const qr = index.filter(c => c.source === 'Permit Exemption Quick Reference');
-  ok(qr.length > 0 && qr.every(c => !/front matter/i.test(c.section)),
-     'the exemption reference lost its headings');
+  const dr = index.filter(c => c.source === 'Permit Desk Reference');
+  ok(dr.length > 0 && dr.every(c => !/front matter/i.test(c.section)),
+     'the Desk Reference lost its headings');
+  // the five guides it replaced are in the county's Archive folder; nothing in
+  // the app may still cite them, or a citation link opens a document that is gone
+  const RETIRED = ['Building Guide', 'Permit Coverage Reference', 'Permit Eligibility Guide',
+                   'Permit Exemption Quick Reference', 'Planning & Zoning Flow Chart'];
+  for (const r of RETIRED) {
+    ok(!index.some(c => c.source === r), `the index still carries the retired "${r}"`);
+    ok(!new RegExp('\{ source: "' + r + '"').test(html),
+       `a knowledge-base entry still cites the retired "${r}"`);
+    ok(!html.includes('/docs/' + r.toLowerCase().replace(/[^a-z]+/g, '-')),
+       `a document link still points at the retired "${r}"`);
+  }
+  ok(fs.existsSync(path.join(ROOT, 'public/docs/permit-desk-reference.pdf')),
+     'the Desk Reference PDF the citations link to is missing');
+  // the figures the retired guides had wrong must not come back as stated fact
+  ok(!/Front 20 ft, Side 20 ft/.test(html), 'the wrong setback line is back in the knowledge base');
+  ok(!/within 1,000 feet of a school/.test(html), 'the disputed alcohol distance is back');
+  ok(!/Small-Scale, under 10 acres/.test(html), 'the superseded 10-acre threshold is back');
   ok(index.filter(c => /^(CONTRACTOR|LICENSED CONTRACTOR|OWNER MAY PULL & DO THE)$/.test(c.section)).length === 0,
      'passages are filed under a table column label again');
   ok(index.filter(c => c.last).length > 0, 'no passage records the page it ends on');
@@ -273,6 +290,18 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
                             [84, 'silviculture only, subject to Best Management'],
                             [85, 'Table of Development Standards']])
     ok(index.some(c => c.text.includes(probe)), `Land Development Code p.${p} fell out of the index again`);
+}
+
+
+// The request body sent to the model. Checked here because there is no API key
+// outside Railway, so these two lines cannot be exercised by actually asking a
+// question from a developer machine.
+{
+  const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+  ok(/model:\s*'claude-sonnet-5-5'/.test(server), 'the model is no longer Sonnet 5.5');
+  ok(/thinking:\s*\{\s*type:\s*'between_tools'\s*\}/.test(server),
+     'thinking is not switched off - answers will pause before the first word');
+  ok(/retrying without it/.test(server), 'the fallback for a rejected thinking field is gone');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -422,34 +422,59 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
   const systemPrompt = `${guardrails}\n\nREFERENCE MATERIAL:\n${refMaterial}`;
   const priorTurns = sanitizeHistory(history);
 
+  // One request body, sent as-is and — only if the model rejects the thinking
+  // field — sent again without it. Thinking off is what keeps the first word
+  // of an answer about a second away; if a future model stops accepting the
+  // off switch, the counter gets a slower assistant rather than a broken one.
+  const askAnthropic = (body) => fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify(body)
+  });
+
   try {
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        // A full project walkthrough (steps + checklist + fee table) doesn't
-        // fit in the single-answer budget.
-        // Describing a drawing or a photo needs more room than a fee lookup.
-        max_tokens: isGuide ? 2500 : (attached.blocks.length ? 2000 : 1000),
-        system: systemPrompt,
-        // Media blocks must come BEFORE the text block, per the API docs.
-        messages: [...priorTurns, {
-          role: 'user',
-          content: attached.blocks.length
-            ? [...attached.blocks, { type: 'text', text: userText.slice(0, 2000) }]
-            : userText.slice(0, 2000)
-        }],
-        stream: wantsStream
-      })
-    });
+    const requestBody = {
+      model: 'claude-sonnet-5-5',
+      // Sonnet 5.5 runs adaptive thinking whenever `thinking` is left out,
+      // which would put a pause before the first word of every answer. The
+      // counter needs the fast lookup, so thinking stays off. `between_tools`
+      // is the documented off switch on this model; `disabled` returns a 400.
+      thinking: { type: 'between_tools' },
+      // A full project walkthrough (steps + checklist + fee table) doesn't
+      // fit in the single-answer budget.
+      // Describing a drawing or a photo needs more room than a fee lookup.
+      max_tokens: isGuide ? 2500 : (attached.blocks.length ? 2000 : 1000),
+      system: systemPrompt,
+      // Media blocks must come BEFORE the text block, per the API docs.
+      messages: [...priorTurns, {
+        role: 'user',
+        content: attached.blocks.length
+          ? [...attached.blocks, { type: 'text', text: userText.slice(0, 2000) }]
+          : userText.slice(0, 2000)
+      }],
+      stream: wantsStream
+    };
+
+    let anthropicResponse = await askAnthropic(requestBody);
 
     // Failures here happen before any streaming has started, so they can still
     // be reported as ordinary JSON with a status code.
+    if (anthropicResponse.status === 400) {
+      const errText = await anthropicResponse.text().catch(() => '');
+      if (/thinking/i.test(errText)) {
+        console.warn('Model rejected the thinking field; retrying without it:', errText);
+        const { thinking, ...withoutThinking } = requestBody;
+        anthropicResponse = await askAnthropic(withoutThinking);
+      } else {
+        console.error('Anthropic API error: 400', errText);
+        return res.status(502).json({ error: 'Anthropic API returned status 400' });
+      }
+    }
+
     if (!anthropicResponse.ok || !anthropicResponse.body) {
       const errText = await anthropicResponse.text().catch(() => '');
       console.error('Anthropic API error:', anthropicResponse.status, errText);
