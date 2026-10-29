@@ -229,18 +229,28 @@ textarea,input,select{font:inherit}
 .suggestion-chip:hover{background:var(--tint);color:var(--maroon);border-color:var(--grid)}
 
 /* ── which documents to answer from ─────────────────────────────── */
-.doc-mode{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 2px 7px}
-.doc-mode button{border:1px solid var(--line);background:var(--surface);color:var(--muted);
-  border-radius:999px;padding:5px 13px;font-size:13px;font-weight:700;line-height:1.3}
-.doc-mode button:hover{background:var(--tint);color:var(--maroon)}
-.doc-mode button.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
-.doc-mode-note{font-size:12.5px;color:var(--muted);margin-left:4px}
+/* Deliberately NOT a pill. The suggestion chips directly above are separate
+   rounded pills in bold, and a pair of those reads as two more questions to
+   click rather than a setting — which is exactly how it was first read. This
+   is one bordered box split into two joined halves, with square-ish corners
+   matching the ask box and a label in front, so it reads as a switch. */
+.doc-mode{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 2px 8px}
+.doc-mode-label{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap}
+.doc-seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-s);
+  overflow:hidden;background:var(--surface)}
+.doc-seg button{border:0;border-right:1px solid var(--line);background:transparent;
+  color:var(--muted);padding:6px 14px;font-size:13px;font-weight:600;line-height:1.3}
+.doc-seg button:last-child{border-right:0}
+.doc-seg button:hover{background:var(--tint);color:var(--maroon)}
+.doc-seg button.on{background:var(--maroon);color:#fff;font-weight:700}
+.doc-mode-note{font-size:12.5px;color:var(--muted)}
 /* the note is the first thing to go when the column is tight — the two
    buttons already say which set is chosen */
 @media(max-width:900px){.doc-mode-note{display:none}}
 /* A 29px pill is readable but not tappable. Everything else in the ask
    row is 46px, so these match it on a touch screen. */
-@media(max-width:779px){.doc-mode button{min-height:44px;padding:0 15px}}
+@media(max-width:779px){.doc-seg button{min-height:44px;padding:0 15px}}
 
 /* Shown when an answer came from the other set of documents. Not an error —
    the reader asked something unmistakable and got a real answer — so it reads
@@ -631,13 +641,13 @@ const KNOWLEDGE_BASE = [
   { source: "Comprehensive Plan", section: "Future Land Use — Density by Category", page: 1, text:
     "Per the Future Land Use Element, residential density caps by land use category: Agriculture — 1 dwelling unit per 10 acres (clustering down to 1-acre lots encouraged). Conservation/Resource Protection areas — 1 unit per 5 acres maximum, and commercial/industrial/solid waste/hazardous waste uses are prohibited entirely. Mixed Use Rural Residential — 1 unit/acre gross density cap. Mixed Use Suburban Residential — up to 2 units/acre. Rural Village — 2 dwelling units per acre where there is no central sewer or water, 4 per acre where central water is available, and never more than 4 even where both central water and sewer are available; all housing types are allowed, from as low as one unit per five acres. Town Center — 8 units/acre with both central water and sewer, 4 with central water only, 2 with neither. Commercial — residential from one unit per five acres up to one unit per acre, and residential may not exceed 30 percent of the area. Industrial, Public Institutional, Public Resource Management and Public Preservation carry no residential density. There is no fourth, in-between figure for any category: if a question asks what applies with central water only, the answer is the 'central water' figure above, not a range. These figures match the Land Development Code's per-district tables." },
   { source: "Office Procedure", section: "How many lots can be created from a parent parcel — there is no numeric cap", text:
-    "Is there a limit to the number of lots that can be created from a parent parcel? There is NO maximum number of lots stated anywhere in the Land Development Code or the Comprehensive Plan. The count is limited by four rules stacking, and whichever bites first is the answer. (1) DENSITY for the future land use category, applied to the acreage of the parent parcel: Agriculture 1 dwelling per 10 acres; Rural Village 2 per acre without central water or sewer, 4 with central water, never more than 4; Mixed Use Rural Residential 1 per acre; Mixed Use Suburban Residential 2 per acre; Town Center 2 without central service, 4 with central water, 8 with both; Conservation 1 per 5 acres. (2) MINIMUM LOT SIZE — 10,000 square feet for a single-family dwelling, LDC Section 5.4(C). (3) LOT SHAPE — every lot must front on a street for at least 60 feet; a lot of 15,000 square feet or more needs a minimum average width of 100 feet, and 10,000 to 15,000 square feet needs 80 feet. (4) WHETHER A NEW STREET IS CREATED — any division that establishes a new street is a subdivision no matter how few lots it makes. Density is almost always the binding one: a 3.84-acre parcel in Rural Village would allow 16 lots on the 10,000 sq ft minimum but only 7 on the 2-per-acre density, so 7 is the answer; 100 acres in Agriculture allows 435 by lot size but only 10 by density. The figure '15 parcels' is NOT a cap on lots — it is the ceiling for skipping the plat, and only where every parcel is ten acres or more with no new roads or easements. When someone asks for the limit, do the arithmetic for their acreage and category and give the number; do not answer that the material does not address it." },
+    "Is there a limit to the number of lots that can be created from a parent parcel? There is NO maximum number of lots stated anywhere in the Land Development Code or the Comprehensive Plan. The count is limited by four rules stacking, and whichever bites first is the answer. (1) DENSITY for the future land use category, applied to the acreage of the parent parcel: Agriculture 1 dwelling per 10 acres; Rural Village 2 per acre without central water or sewer, 4 with central water, never more than 4; Mixed Use Rural Residential 1 per acre; Mixed Use Suburban Residential 2 per acre; Town Center 2 without central service, 4 with central water, 8 with both; Conservation 1 per 5 acres. (2) MINIMUM LOT SIZE — 10,000 square feet for a single-family dwelling, LDC Section 5.4(C), page 115. These are the SUBDIVISION design standards: they govern lots being created, so say what they apply to rather than quoting them as a rule for every lot. (3) LOT SHAPE — every lot must front on a street for at least 60 feet; a lot of 15,000 square feet or more needs a minimum average width of 100 feet, and 10,000 to 15,000 square feet needs 80 feet. (4) WHETHER A NEW STREET IS CREATED — any division that establishes a new street is a subdivision no matter how few lots it makes. Density is almost always the binding one: a 3.84-acre parcel in Rural Village would allow 16 lots on the 10,000 sq ft minimum but only 7 on the 2-per-acre density, so 7 is the answer; 100 acres in Agriculture allows 435 by lot size but only 10 by density. The figure '15 parcels' is NOT a cap on lots — it is the ceiling for skipping the plat, and only where every parcel is ten acres or more with no new roads or easements. When someone asks for the limit, do the arithmetic for their acreage and category and give the number; do not answer that the material does not address it." },
   { source: "Office Procedure", section: "Wellhead setbacks — the 200-foot zone does not apply to a private well", text:
     "How close can someone build to a well, and does the 200-foot wellhead zone of exclusion apply to a private residential well? The Land Development Code answers it directly: Section 6.4-4(A) says areas within two hundred feet of a potable water supply well — and the Code writes the exclusion in brackets, ‘but not individual private wells’ — are the zone of exclusion where no land development activity is permitted. So a homeowner drilling or using their own well on their own parcel is NOT barred from building within 200 feet of it. The 200-foot exclusion protects public and community potable water supply wells, which is also how the Code defines a wellfield: an area containing one or more wells used for PUBLIC water supply. Between 200 and 500 feet of such a well, development is allowed but certain uses are not: LDC 6.4-4(B) prohibits hazardous or toxic materials handling and storage, naming landfills, gasoline stations, petroleum storage and pesticide storage; Comprehensive Plan Policy 1-5 adds feedlots and commercial animal facilities, wastewater treatment plants and percolation ponds, mines, and excavation of waterways that intersect the water table. CAUTION when quoting the Plan on its own: Policy 1-5 states the 200-foot zone of exclusion WITHOUT the private-well carve-out the Code has, and where the two disagree the Plan controls. Read literally, the Plan would stop an owner building within 200 feet of their own well, which is not what was intended and is on the county’s list of amendments to make. Until the Plan is corrected, apply the Code’s rule — private wells are not subject to the 200-foot exclusion — and say that the Plan language is being cleaned up. Note also that neither document defines ‘wellhead’ or ‘land development activity’; only ‘wellfield’ is defined." },
   { source: "Office Procedure", section: "Splitting the same land twice — is there a waiting period?", text:
     "How long before someone can split a parcel again, and can repeated two-lot splits be used to avoid the subdivision process? There is NO waiting period, cooling-off period or lookback period anywhere in the Land Development Code or the Comprehensive Plan. Nothing in the Code counts the lots previously created from the same parent parcel, and no procedure for a lot split is defined at all, so as the Code reads today an owner could split into two, then split one of those into two again, and each step would be handled as a Property Split Review at $150.00 rather than as a subdivision plat. That is a real gap and it is on the county's list of amendments to make. What the Code DOES give staff in the meantime: the definition of a subdivision covers a division of land 'for the purpose, whether immediate or future, of transfer of ownership' (LDC Sec. 2.4 and Section 5.2), and it expressly 'includes a resubdivision.' So where an applicant has told the county — in an application, an email or at the counter — that the intent is to end up with three or more lots, the division is a subdivision from the start, even if it is carried out in stages, and the plat requirement applies. Document what the applicant says about their intent, because that written record is what supports treating staged splits as one subdivision. Also note the floodplain rule is not avoided by splitting in stages: the Plan says no new tracts, lots or parcels may be created that lack enough uplands, and any new lot containing wetlands or floodplain must be at least 5 acres — that applies to every newly created lot however it was created. If the question is about closing the loophole rather than applying it, the usual fix is to define the parent parcel as of a fixed date and count every division from it cumulatively; that is an amendment for the Board and the County Attorney, not a counter decision, and SB 180 may restrict adopting a new restriction until the freeze lifts." },
   { source: "Office Procedure", section: "Splitting land — the complete checklist before quoting an applicant", text:
-    "Everything that governs dividing land in Liberty County, in one place. PROCESS: two lots is not a subdivision — it is a Property Split Review, $150.00. Three or more lots IS a subdivision (LDC Section 2.4 and Section 5.2) and needs Subdivision Plat Approval under Section 5.3 — $1,000.00 or $25.00 per lot, whichever is greater, on a plat prepared and sealed by a Florida Professional Surveyor and Mapper, approved by the Board of County Commissioners. The plat exemption applies only to a division into no more than 15 parcels of TEN ACRES OR MORE each, with no new public roads, streets, rights-of-way or utility easements (a Minor Subdivision); a parcel too small to yield ten-acre lots can never use it. DESIGN STANDARDS once it is a subdivision (Section 5.4): lots shall front on a street for at least 60 feet; minimum lot size 10,000 square feet for a single-family dwelling; lots of 15,000 square feet or more need a 100-foot minimum average width, and 10,000 to 15,000 square feet need 80 feet; corner lots 15 percent wider; the street system must connect to a county or state road approved for county maintenance. FLOOD AND WETLAND: a new residential subdivision that includes wetlands or floodplain must cluster development in the uplands; no new lot may be created without enough uplands for all structures and roadways plus a 50-foot natural vegetated upland buffer; ANY new lot that contains wetlands or floodplain must be AT LEAST 5 ACRES, with the wetland or floodplain shown on the plat as undevelopable. On a parcel smaller than five acres this is decisive — a lot containing floodplain cannot be created at all, so check the FEMA flood map against the parcel before telling anyone the split works. A 75-foot native vegetation buffer applies along the Apalachicola River, the Ochlockonee River, Telogia Creek and the New River. ALSO: density for the future land use category caps the count; a parent tract divided by a public road that existed on or before September 24, 1992 counts as a separate parent tract on each side, each granted at least one single-family unit; and Comprehensive Plan Policy 8-2 allows a parcel in single ownership to be subdivided for immediate family members' primary residences. The phrase 'lot split' does not appear in the Land Development Code — the county's mechanisms are the Property Split Review for two lots and the subdivision plat for three or more, so answer with those rather than saying the Code is silent." },
+    "Everything that governs dividing land in Liberty County, in one place. PROCESS: two lots is not a subdivision — it is a Property Split Review, $150.00. Three or more lots IS a subdivision (LDC Section 2.4 and Section 5.2) and needs Subdivision Plat Approval under Section 5.3 — $1,000.00 or $25.00 per lot, whichever is greater, on a plat prepared and sealed by a Florida Professional Surveyor and Mapper, approved by the Board of County Commissioners. The plat exemption applies only to a division into no more than 15 parcels of TEN ACRES OR MORE each, with no new public roads, streets, rights-of-way or utility easements (a Minor Subdivision); a parcel too small to yield ten-acre lots can never use it. DESIGN STANDARDS once it is a subdivision (Section 5.4): lots shall front on a street for at least 60 feet (LDC Section 5.4(C), page 115); minimum lot size 10,000 square feet for a single-family dwelling (LDC Section 5.4(C), page 115); lots of 15,000 square feet or more need a 100-foot minimum average width, and 10,000 to 15,000 square feet need 80 feet; corner lots 15 percent wider; the street system must connect to a county or state road approved for county maintenance. FLOOD AND WETLAND: a new residential subdivision that includes wetlands or floodplain must cluster development in the uplands; no new lot may be created without enough uplands for all structures and roadways plus a 50-foot natural vegetated upland buffer; ANY new lot that contains wetlands or floodplain must be AT LEAST 5 ACRES, with the wetland or floodplain shown on the plat as undevelopable. On a parcel smaller than five acres this is decisive — a lot containing floodplain cannot be created at all, so check the FEMA flood map against the parcel before telling anyone the split works. A 75-foot native vegetation buffer applies along the Apalachicola River, the Ochlockonee River, Telogia Creek and the New River. ALSO: density for the future land use category caps the count; a parent tract divided by a public road that existed on or before September 24, 1992 counts as a separate parent tract on each side, each granted at least one single-family unit; and Comprehensive Plan Policy 8-2 allows a parcel in single ownership to be subdivided for immediate family members' primary residences. The phrase 'lot split' does not appear in the Land Development Code — the county's mechanisms are the Property Split Review for two lots and the subdivision plat for three or more, so answer with those rather than saying the Code is silent." },
   { source: "Comprehensive Plan", section: "Wetland & Floodplain Lot Requirements", page: 5, text:
     "New residential subdivisions that include wetlands and/or floodplains must cluster development in upland areas — they cannot create lots without enough uplands to fit all structures, roadways, and a minimum 50-foot natural vegetated upland buffer. Any new lot containing wetlands or floodplain must be at least 5 acres in size, with adequate uplands to accommodate all development, and the wetland/floodplain area must be shown on the plat as undevelopable. Separately, a 75-foot native vegetation buffer (measured from the ordinary high-water line) is required adjacent to the Apalachicola River, Ochlockonee River, Telogia Creek, and New River — this is the same 75-foot river buffer already referenced in the Building Guide's zoning tips." },
   { source: "Comprehensive Plan", section: "Wellhead Protection Zones", page: 6, text:
@@ -838,6 +848,77 @@ const PERMIT_SUBJECT = /\bpermits?\b|\bfees?\b|setback|property line|how far|ins
 // about repairs means SHIP repairs. 'building' leaves the automatic gate in
 // charge, which still answers an unmistakable SHIP question rather than giving
 // a dead end to whoever forgot to flip the switch.
+// The Code and the Plan are written so that a rule's SCOPE lives above it. The
+// 10,000 sq ft minimum lot sits under "5.4 Subdivision Design Standards", and
+// that heading is the only thing saying it governs lots being created in a
+// subdivision rather than every lot in the county. Objective 8 is what makes
+// Policy 8-1 a cap on an exception for pre-1992 lots rather than a flat
+// one-house-per-lot rule. A single retrieved chunk carries the rule and leaves
+// the scope behind, which is how a true sentence turns into guidance that is
+// wrong for the person standing at the counter. Both of those actually
+// happened. So when a hit lands in the Code or the Plan, the rest of its
+// section is sent with it.
+//
+// The siblings are context only. They carry no retrieval score, and
+// citableSources lists nothing that scored, so they cannot become a citation
+// on their own - they are there to stop the model reading a fragment as if it
+// were the whole rule.
+const WHOLE_SECTION = new Set(['Land Development Code', 'Comprehensive Plan']);
+
+// Neighbours are taken by walking OUTWARD from the hit while the section holds,
+// never by matching the section name across the document. Two reasons, both of
+// them ways that would do harm rather than prevent it:
+//
+//   "3. Density" is the heading under every land use district in turn. Matching
+//   on the name would put one district's density next to another's and invite
+//   exactly the mix-up this exists to stop.
+//
+//   "Sec. 2.4 Definition of terms." runs to 133 passages over 43 pages. A
+//   section that long is not a unit of scope, and eight arbitrary definitions
+//   are noise in front of the answer, so a run that long is left alone.
+//
+// What sits above a rule usually carries its scope, so the text before the hit
+// is taken first.
+function withWholeSection(picked, eitherSide = 3, total = 14, maxRun = 24) {
+  if (!Array.isArray(REFERENCE_INDEX) || !REFERENCE_INDEX.length) return picked;
+  if (withWholeSection._for !== REFERENCE_INDEX) {
+    withWholeSection._for = REFERENCE_INDEX;
+    withWholeSection._pos = new Map(REFERENCE_INDEX.map((c, i) => [c, i]));
+  }
+  const pos = withWholeSection._pos;
+  const sameSection = (a, b) => a && b && a.source === b.source && a.section === b.section;
+  const have = new Set(picked);
+  const out = [];
+  let added = 0;
+
+  for (const chunk of picked) {
+    const at = pos.get(chunk);
+    if (!WHOLE_SECTION.has(chunk.source) || !chunk.section || at === undefined || added >= total) {
+      out.push(chunk);
+      continue;
+    }
+    let first = at, last = at;
+    while (first > 0 && sameSection(REFERENCE_INDEX[first - 1], chunk)) first--;
+    while (last < REFERENCE_INDEX.length - 1 && sameSection(REFERENCE_INDEX[last + 1], chunk)) last++;
+    if (last - first + 1 > maxRun) { out.push(chunk); continue; }
+
+    const before = [], after = [];
+    for (let i = at - 1; i >= first && before.length < eitherSide; i--)
+      if (!have.has(REFERENCE_INDEX[i])) before.unshift(REFERENCE_INDEX[i]);
+    for (let i = at + 1; i <= last && after.length < eitherSide; i++)
+      if (!have.has(REFERENCE_INDEX[i])) after.push(REFERENCE_INDEX[i]);
+
+    for (const c of before.concat([chunk], after)) {
+      if (c !== chunk) {
+        if (added >= total) continue;
+        have.add(c); added++;
+      }
+      out.push(c);
+    }
+  }
+  return out;
+}
+
 function retrieveChunks(query, topN = 5, scoreOut = null, shipContext = false, mode = 'building') {
   const wantShip = mode === 'ship'
     || shipAsked(query)
@@ -2243,14 +2324,17 @@ function render() {
            was, at one point, confident enough to retract a correct answer; a
            switch someone forgot to flip just says it has nothing, which they
            can see and fix. So the choice is shown rather than inferred. -->
-      <div class="doc-mode" role="group" aria-label="Which documents to answer from">
-        <button type="button" class="${docMode === 'building' ? 'on' : ''}"
-          aria-pressed="${docMode === 'building'}" onclick="setDocMode('building')">Building &amp; permits</button>
-        <button type="button" class="${docMode === 'ship' ? 'on' : ''}"
-          aria-pressed="${docMode === 'ship'}" onclick="setDocMode('ship')">SHIP housing</button>
+      <div class="doc-mode">
+        <span class="doc-mode-label">Answer from</span>
+        <div class="doc-seg" role="group" aria-label="Which documents to answer from">
+          <button type="button" class="${docMode === 'building' ? 'on' : ''}"
+            aria-pressed="${docMode === 'building'}" onclick="setDocMode('building')">Building &amp; permits</button>
+          <button type="button" class="${docMode === 'ship' ? 'on' : ''}"
+            aria-pressed="${docMode === 'ship'}" onclick="setDocMode('ship')">SHIP housing</button>
+        </div>
         <span class="doc-mode-note">${docMode === 'ship'
-          ? 'Answering from the LHAP, the SHIP manual and the income limits.'
-          : 'Answering from the permit documents, the Code and the Plan.'}</span>
+          ? 'the LHAP, the SHIP manual and the income limits'
+          : 'the permit documents, the Code and the Plan'}</span>
       </div>
       <div class="input-bar">
         ${UPLOADS_ENABLED ? `
@@ -2594,8 +2678,11 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
     // wider net; single lookups stay tight to avoid diluting the context.
     await loadReferenceIndex();   // full LDC / Comp Plan text, fetched once
     const chunkScores = new Map();
-    const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9,
-                                          chunkScores, shipInContext(messages), docMode);
+    const scored = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9,
+                                  chunkScores, shipInContext(messages), docMode);
+    // the rest of each Code or Plan section travels with the hit, so a rule
+    // never reaches the model without the heading that says when it applies
+    const relevantChunks = withWholeSection(scored);
     // Everything retrieved is sent to the model; only the passages that
     // genuinely matched are listed to the reader as the basis of the answer.
     const shownSources = citableSources(relevantChunks, chunkScores, question);

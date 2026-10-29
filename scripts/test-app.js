@@ -437,8 +437,52 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
     ok(/class="doc-mode"/.test(html), 'the selector is not rendered');
     ok(/answeredFromShip/.test(html) && /class="cross-mode"/.test(html),
        'the notice that an answer came from the other document set is gone');
-    ok(ruleBody('.doc-mode button.on').includes('#fff') || ruleBody('.doc-mode button.on').includes('fff'),
+    ok(ruleBody('.doc-seg button.on').includes('fff'),
        'the chosen selector button is not legible — it needs white on maroon, not grey');
+    // it must not look like the suggestion chips sitting directly above it
+    ok(!/border-radius:999px/.test(ruleBody('.doc-seg button')),
+       'the selector is a pill again — it reads as another suggestion to click');
+    ok(/class="doc-seg"/.test(html) && /doc-mode-label/.test(html),
+       'the selector lost its joined-segment shape or its label');
+  }
+
+  // Whole-section retrieval: a Code rule must not reach the model without the
+  // passages around it that say what it applies to. The 10,000 sq ft minimum
+  // lot lives under the SUBDIVISION design standards, and quoting it as a rule
+  // for every lot is how a true sentence becomes wrong advice at the counter.
+  {
+    const base = sb.retrieveChunks('what is the minimum lot size for a single family home', 9, new Map());
+    const full = sb.withWholeSection(base);
+    ok(full.length > base.length, 'Code hits no longer bring the rest of their section with them');
+    const added = full.filter(c => !base.includes(c));
+    ok(added.every(c => ['Land Development Code', 'Comprehensive Plan'].includes(c.source)),
+       'whole-section expansion is reaching outside the Code and the Plan');
+
+    // never by section NAME: "3. Density" heads every land use district, and
+    // "Sec. 2.4 Definition of terms." is 133 passages over 43 pages
+    for (const q of ['what is the density for agriculture land', 'what is the minimum lot size',
+                     'how far back from the property line', 'define a subdivision']) {
+      const got = sb.withWholeSection(sb.retrieveChunks(q, 9, new Map()));
+      const defs = got.filter(c => /Definition of terms/i.test(c.section || '')).length;
+      ok(defs <= 2, `"${q}" bulk-expanded ${defs} definition passages into the answer`);
+      ok(got.length <= 9 + 14, `"${q}" expanded past the budget: ${got.length} chunks`);
+    }
+
+    // every added passage must be adjacent, in the document, to a hit in the
+    // same section - not merely share its heading
+    const idxPos = new Map(index.map((c, i) => [c.source + '|' + c.page + '|' + c.text.slice(0, 40), i]));
+    const key = c => c.source + '|' + c.page + '|' + c.text.slice(0, 40);
+    for (const c of added) {
+      const near = base.some(b => b.source === c.source && b.section === c.section &&
+        Math.abs((idxPos.get(key(b)) ?? -99) - (idxPos.get(key(c)) ?? 99)) <= 4);
+      ok(near, `an expanded passage (${c.source} p${c.page}) is not next to any hit it was added for`);
+    }
+
+    ok(/THE PAGE YOU CITE MUST BE THE PAGE THE FIGURE IS ON/.test(
+         fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8')),
+       'the rule forbidding a borrowed page number is gone');
+    ok(/Section 5\.4\(C\), page 115/.test(html),
+       'the verified page for the 10,000 sq ft minimum lot is gone from the curated entry');
   }
 
   // Policy 8-1 is the cap on an exception for pre-1992 lots of record, not a
