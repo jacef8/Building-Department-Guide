@@ -441,6 +441,22 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
        'the chosen selector button is not legible — it needs white on maroon, not grey');
   }
 
+  // Policy 8-1 is the cap on an exception for pre-1992 lots of record, not a
+  // general "one house per lot" rule. The first version of this entry said it
+  // "usually decides whether a second home can go on family land", which would
+  // have had staff telling people with acreage they could not build.
+  {
+    const fam = sb.retrieveChunks('can my son put a mobile home on my land', 9, new Map())
+      .find(c => /Policy 8-2/i.test(c.section || ''));
+    ok(!!fam, 'the family-land entry no longer ranks for the question it exists to answer');
+    ok(fam && /NOT a general rule/i.test(fam.text),
+       'the entry treats Policy 8-1 as a universal one-house-per-lot rule again');
+    ok(fam && /September 24, 1992|24 September 1992/.test(fam.text),
+       'the entry lost the 1992 lot-of-record cut-off that decides whether Objective 8 applies');
+    ok(fam && /density for the parcel's future land use category/i.test(fam.text),
+       'the entry no longer points at density as what actually limits homes on a normal parcel');
+  }
+
   // the strategy names and their awards print on different LHAP lines and land
   // in different passages, so this entry is what keeps them together
   {
