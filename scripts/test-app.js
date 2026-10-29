@@ -426,6 +426,18 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
          `the strategy entry lost ${pair[0]} or its $${pair[1]} award`);
     ok(strat && /NOT Liberty County's allocation/i.test(strat.text),
        'the entry no longer warns that $350,000 is a statutory threshold, not the county allocation');
+    // the manufactured housing strategy does NOT share the others' terms, and
+    // the first version of this entry said it did
+    ok(strat && /awarded as a GRANT/i.test(strat.text),
+       'the entry no longer says relocation and lot rent assistance are grants, not loans');
+    ok(strat && /TEN-year term/i.test(strat.text),
+       'the entry no longer says manufactured-housing rehab runs ten years, not five');
+    ok(strat && strat.text.includes('15,000'),
+       'the entry lost the $15,000 manufactured-housing rehab award');
+    ok(strat && /15 June 1994/.test(strat.text),
+       'the entry lost the pre-1994 mobile home eligibility cut-off');
+    ok(strat && /NOT the same across the strategies/i.test(strat.text),
+       'the entry claims the terms are uniform again - they are not');
   }
 
   for (const [name, file] of [['Liberty County LHAP', 'liberty-lhap-2026-2029.pdf'],
