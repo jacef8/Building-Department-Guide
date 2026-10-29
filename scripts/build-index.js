@@ -95,8 +95,25 @@ const HEADING = [
   /^(\d{1,2}\.\s+[A-Z][^.]{3,60})$/,
   /^((?:Fee Assessment|Permit Coverage|Intake Rules|Fee Modifiers|Additional Permit Rules|Documented Inspections|Inspection Fees)\b.*)$/i,
 ];
+// The Comprehensive Plan writes each policy as one long sentence that opens
+// with its own number — "Policy 8-2: Pursuant to and consistent with section
+// 163.3179, Florida Statutes, in order to avoid..." — and 208 of its 233
+// policy lines run past the 90-character limit below, so they never registered
+// as headings at all. Every passage then inherited whichever short policy
+// heading had last got through: Policy 8-2 and a page of Chapter II traffic
+// text were all filed under "Policy 8-1", and a citation named the wrong
+// policy. The number is the part staff quote to an applicant, so it is taken
+// before the length test and kept with only as much of the sentence as fits.
+const PLAN_POLICY = /^((?:Policy|Objective|Goal)\s+(?:[A-Z]?\d+[\d.\-]*|[A-Z]))\s*[:.]?\s*(.*)$/i;
+
 function headingOf(line, big, repeated) {
   const l = line.trim();
+  const policy = l.match(PLAN_POLICY);
+  if (policy) {
+    const label = policy[1].replace(/\s+/g, ' ').trim();
+    const rest = (policy[2] || '').replace(/\s+/g, ' ').trim();
+    return rest ? `${label}: ${rest}`.slice(0, 88).replace(/[\s,;:]+$/, '') : label;
+  }
   if (l.length > 90) return null;
   // Set in type larger than the body text — the only signal available in the
   // department's own one-pagers, whose headings are ordinary sentences

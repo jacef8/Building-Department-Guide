@@ -228,6 +228,29 @@ textarea,input,select{font:inherit}
   background:var(--surface);color:var(--ink-2);font-size:14px;font-weight:650;text-align:left}
 .suggestion-chip:hover{background:var(--tint);color:var(--maroon);border-color:var(--grid)}
 
+/* ── which documents to answer from ─────────────────────────────── */
+.doc-mode{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 2px 7px}
+.doc-mode button{border:1px solid var(--line);background:var(--surface);color:var(--muted);
+  border-radius:999px;padding:5px 13px;font-size:13px;font-weight:700;line-height:1.3}
+.doc-mode button:hover{background:var(--tint);color:var(--maroon)}
+.doc-mode button.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
+.doc-mode-note{font-size:12.5px;color:var(--muted);margin-left:4px}
+/* the note is the first thing to go when the column is tight — the two
+   buttons already say which set is chosen */
+@media(max-width:900px){.doc-mode-note{display:none}}
+/* A 29px pill is readable but not tappable. Everything else in the ask
+   row is 46px, so these match it on a touch screen. */
+@media(max-width:779px){.doc-mode button{min-height:44px;padding:0 15px}}
+
+/* Shown when an answer came from the other set of documents. Not an error —
+   the reader asked something unmistakable and got a real answer — so it reads
+   as information with the switch attached, not a warning. */
+.cross-mode{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 8px;
+  padding:8px 11px;border:1px solid var(--grid);border-left:3px solid var(--maroon);
+  border-radius:var(--r-s);background:var(--tint);font-size:13px;color:var(--ink)}
+.cross-mode button{border:1px solid var(--maroon);background:var(--maroon);color:#fff;
+  border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:700}
+
 /* ── ask box ────────────────────────────────────────────────────── */
 .input-bar{display:flex;gap:8px;align-items:flex-end;background:var(--surface);
   border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--raise);padding:9px}
@@ -479,6 +502,19 @@ const KNOWLEDGE_BASE = [
     "Manufactured housing, relocation and lot rent assistance: awarded as a GRANT, not a loan — there is no loan term, no forgiveness, no repayment and no default provision. " +
     "Manufactured housing, rehabilitation and emergency repairs: a loan at 0% secured by a note and mortgage or lien, with a TEN-year term rather than five, forgiven at the end of the term, no repayment while the loan is in good standing, and default on sale, transfer or conveyance, conversion to a rental property, loss of homestead exemption, or failure to occupy the home as a primary residence. " +
     "These are maximum awards, not entitlements, and an applicant still has to qualify on income and on the strategy's own conditions. Note that the $350,000 figure in the plan is NOT Liberty County's allocation — it is the statutory threshold under which a small county may use up to 10 percent of programme income for administrative costs. The plan does not state the county's annual SHIP allocation." },
+
+  // Asked at the counter as "can a parent put a mobile home on their land for
+  // their kid", which shares not one word with how the Plan says it —
+  // "subdivided for use of immediate family members". The policy itself is a
+  // single sentence and was being filed under the wrong policy number, so the
+  // tool could neither find it nor cite it correctly.
+  { source: "Comprehensive Plan", section: "Policy 8-2 — land divided for immediate family", page: 10, text:
+    "Putting a home on family land for a son, daughter, parent or other immediate family member. The provision people are asking about is Comprehensive Plan POLICY 8-2: \"Pursuant to and consistent with section 163.3179, Florida Statutes, in order to avoid disproportionate economic impact on owners of small parcels of property, each parcel in single ownership as of the effective date of this Plan, may be subdivided for use of immediate family members for their primary residence.\" " +
+    "WHAT IT DOES: it allows a parcel to be SUBDIVIDED so an immediate family member can live there as their primary residence, where the ordinary rules on dividing land would otherwise prevent it. " +
+    "THE CONDITIONS, all of which have to hold: the parcel must have been in single ownership as of the effective date of the Plan — this is not available for land bought afterwards and then split; the person moving in must be an immediate family member; and it must be their primary residence, not a rental or a seasonal place. " +
+    "WHAT IT DOES NOT SAY: the policy does not state that it waives the minimum lot size, the density limit for the parcel's future land use category, setbacks, septic requirements, or the need for the usual permits. Do not tell an applicant that being family exempts them from those. The density for each land use category is in the Comprehensive Plan's Future Land Use element and the minimum dimensions are in the Land Development Code — read both for the parcel in question. " +
+    "ALSO CHECK POLICY 8-1, immediately before it, which limits dwellings per lot: for a single lot not contiguous to other lots under the same ownership, only one single-family dwelling per lot of record may be permitted; and where lots DO lie contiguous to other lots or parcels under the same ownership, the owner is entitled to build one single-family dwelling unit in total across those contiguous lots. That rule is what usually decides whether a second home can go on family land at all, so read it before quoting Policy 8-2. " +
+    "AT THE COUNTER: say the provision exists and name Policy 8-2, say it is about dividing the land rather than a blanket exemption from the dimensional rules, and check the parcel's land use category, its acreage and Policy 8-1 before telling anyone it will work. Whether a particular parcel qualifies is a determination for the Building Official or the Development Administrator, not a counter answer." },
 
   // ── Inspections (Permit Coverage & Inspections Reference, Part 2) ────
   // Additional/Re-Inspection fees live in the "Inspection Fees" entry under
@@ -794,8 +830,16 @@ function shipInContext(history, lookback = 3) {
 // the gate again even mid-SHIP conversation; "how is that calculated" does not.
 const PERMIT_SUBJECT = /\bpermits?\b|\bfees?\b|setback|property line|how far|inspection|affidavit|zoning|\bplat\b|subdivision|certificate of occupancy|\broof|\bshed\b|\bbarn\b|\bpool\b|\bdeck\b|notice of commencement|building code|site plan|owner[- ]builder|contractor licen/i;
 
-function retrieveChunks(query, topN = 5, scoreOut = null, shipContext = false) {
-  const wantShip = shipAsked(query) || (shipContext && !PERMIT_SUBJECT.test(query || ''));
+// `mode` is the selector by the ask box, and it is the one signal that is not a
+// guess. Set to 'ship' it opens the housing documents outright, including for a
+// question that names a permit subject - someone who has chosen SHIP and asks
+// about repairs means SHIP repairs. 'building' leaves the automatic gate in
+// charge, which still answers an unmistakable SHIP question rather than giving
+// a dead end to whoever forgot to flip the switch.
+function retrieveChunks(query, topN = 5, scoreOut = null, shipContext = false, mode = 'building') {
+  const wantShip = mode === 'ship'
+    || shipAsked(query)
+    || (shipContext && !PERMIT_SUBJECT.test(query || ''));
   const pool = KNOWLEDGE_BASE.concat(REFERENCE_INDEX)
     .filter(c => !c.topic || (c.topic === 'ship' && wantShip));
   const qRaw = tokenize(query);
@@ -1397,6 +1441,25 @@ function formatParcelResult(data, searchedFor) {
 // App state & rendering
 // ══════════════════════════════════════════════════════════════════════
 let messages = [];
+
+// Which set of documents the reader has chosen. It survives a reload because
+// someone working through a morning of SHIP files should not have to set it
+// again on every question; it is deliberately NOT reset by "New question" for
+// the same reason. Storage can throw in a locked-down browser, so it falls
+// back to the permit documents, which is what nearly every question is about.
+let docMode = 'building';
+try {
+  if (localStorage.getItem('bda-doc-mode') === 'ship') docMode = 'ship';
+} catch (e) { /* private window or blocked storage — stay on building */ }
+
+function setDocMode(mode) {
+  docMode = mode === 'ship' ? 'ship' : 'building';
+  try { localStorage.setItem('bda-doc-mode', docMode); } catch (e) {}
+  render();
+  const box = document.getElementById('questionInput');
+  if (box) box.focus();
+}
+
 let isLoading = false;
 let lastError = null;
 let kbDropdownOpen = false;
@@ -2135,6 +2198,7 @@ function render() {
                 // conversations saved before this have no `shown`, so they render as before
                 const cited = declinedAnswer(m.content) ? [] : (m.shown || m.sources || []);
                 return cited.length && !m.streaming ? `
+                ${m.fromShip ? `<div class="cross-mode">Answered from the SHIP housing documents, while the selector is on Building &amp; permits. <button type="button" onclick="setDocMode('ship')">Switch to SHIP housing</button></div>` : ''}
                 <details class="sources-used">
                   <summary>${cited.length} source${cited.length === 1 ? '' : 's'}</summary>
                   ${cited.map(s => {
@@ -2173,6 +2237,19 @@ function render() {
           `).join('')}
         </div>
       ` : ''}
+      <!-- Which documents to answer from. A guess that goes wrong is silent and
+           was, at one point, confident enough to retract a correct answer; a
+           switch someone forgot to flip just says it has nothing, which they
+           can see and fix. So the choice is shown rather than inferred. -->
+      <div class="doc-mode" role="group" aria-label="Which documents to answer from">
+        <button type="button" class="${docMode === 'building' ? 'on' : ''}"
+          aria-pressed="${docMode === 'building'}" onclick="setDocMode('building')">Building &amp; permits</button>
+        <button type="button" class="${docMode === 'ship' ? 'on' : ''}"
+          aria-pressed="${docMode === 'ship'}" onclick="setDocMode('ship')">SHIP housing</button>
+        <span class="doc-mode-note">${docMode === 'ship'
+          ? 'Answering from the LHAP, the SHIP manual and the income limits.'
+          : 'Answering from the permit documents, the Code and the Plan.'}</span>
+      </div>
       <div class="input-bar">
         ${UPLOADS_ENABLED ? `
           <input type="file" id="fileInput" multiple accept=".pdf,image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleFilePick(event)">
@@ -2516,10 +2593,14 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
     await loadReferenceIndex();   // full LDC / Comp Plan text, fetched once
     const chunkScores = new Map();
     const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9,
-                                          chunkScores, shipInContext(messages));
+                                          chunkScores, shipInContext(messages), docMode);
     // Everything retrieved is sent to the model; only the passages that
     // genuinely matched are listed to the reader as the basis of the answer.
     const shownSources = citableSources(relevantChunks, chunkScores, question);
+    // Someone on "Building & permits" can still ask an unmistakable SHIP
+    // question and get an answer - a dead end would be worse. But they should
+    // be told where it came from, and offered the switch.
+    const answeredFromShip = docMode !== 'ship' && shownSources.some(c => c.topic === 'ship');
     let contextText = relevantChunks.length
       // A passage that runs over a page break names both pages, so a rule on
       // the second one is not cited to the page before it.
@@ -2561,12 +2642,12 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
 
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/event-stream') && response.body) {
-      await consumeAnswerStream(response, relevantChunks, shownSources);
+      await consumeAnswerStream(response, relevantChunks, shownSources, answeredFromShip);
     } else {
       // Non-streaming fallback, in case a proxy collapses the stream.
       const data = await response.json();
       const answer = data.answer || "I didn't get a usable response \u2014 try rephrasing the question.";
-      messages.push({ role: 'assistant', content: answer, sources: relevantChunks, shown: shownSources });
+      messages.push({ role: 'assistant', content: answer, sources: relevantChunks, shown: shownSources, fromShip: answeredFromShip });
     }
   } catch (err) {
     lastError = "Couldn't reach the assistant backend (" + err.message + "). If you're running this locally, make sure the proxy server is started (npm start) and ANTHROPIC_API_KEY is set.";
@@ -2578,8 +2659,8 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
 // scroll position, so only the one bubble's contents are rewritten, and no
 // more often than every 60ms — enough to read as continuous typing without
 // re-parsing the markdown on every character.
-async function consumeAnswerStream(response, sources, shown) {
-  const msg = { role: 'assistant', content: '', sources, shown: shown || sources, streaming: true };
+async function consumeAnswerStream(response, sources, shown, fromShip) {
+  const msg = { role: 'assistant', content: '', sources, shown: shown || sources, fromShip: !!fromShip, streaming: true };
   messages.push(msg);
   render();
 

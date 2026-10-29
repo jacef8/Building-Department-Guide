@@ -413,6 +413,34 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
        'the gate no longer recognises "lot rent assistance" on its own');
   }
 
+  // the selector: explicit choice beats every inference
+  {
+    const ship = (q, mode) => sb.retrieveChunks(q, 9, new Map(), false, mode)
+      .filter(c => c.topic === 'ship').length;
+    // on SHIP, a question naming a permit subject still gets the housing
+    // documents - someone who chose SHIP and asks about repairs means SHIP
+    for (const q of ['what is covered for repairs', 'who qualifies', 'what is the maximum award',
+                     'rehabilitation of a mobile home'])
+      ok(ship(q, 'ship') > 0, `with the selector on SHIP, "${q}" got no housing documents`);
+    // on Building, the gate is in charge: permit questions stay clean
+    for (const q of ['what is the roofing permit fee', 'do i need a permit for a shed',
+                     'can i repair my own roof after the storm'])
+      ok(ship(q, 'building') === 0, `with the selector on Building, "${q}" pulled SHIP material`);
+    // but an unmistakable SHIP question is still answered rather than dead-ended
+    ok(ship('what are the ship income limits', 'building') > 0,
+       'on Building, an unmistakable SHIP question gets a dead end instead of an answer');
+
+    ok(/let docMode = 'building'/.test(html), 'the selector no longer defaults to the permit documents');
+    ok(/function setDocMode/.test(html), 'the selector handler is gone');
+    ok(/onclick="setDocMode\('ship'\)"/.test(html) && /onclick="setDocMode\('building'\)"/.test(html),
+       'one of the two selector buttons is missing');
+    ok(/class="doc-mode"/.test(html), 'the selector is not rendered');
+    ok(/answeredFromShip/.test(html) && /class="cross-mode"/.test(html),
+       'the notice that an answer came from the other document set is gone');
+    ok(ruleBody('.doc-mode button.on').includes('#fff') || ruleBody('.doc-mode button.on').includes('fff'),
+       'the chosen selector button is not legible — it needs white on maroon, not grey');
+  }
+
   // the strategy names and their awards print on different LHAP lines and land
   // in different passages, so this entry is what keeps them together
   {
