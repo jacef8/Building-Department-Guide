@@ -132,11 +132,20 @@ function probesFor(target) {
 // Which page of the cited span actually carries the sentence. Returns the
 // cited page unchanged when the phrase is nowhere in the span, so a citation
 // never lands somewhere unrelated because of a loose match.
+//
+// The search starts one page EARLIER than the citation. A passage that was
+// split at the size limit carries a tail of the previous passage into its
+// opening, and the page recorded is the one the split happened on, so its
+// first sentences can belong to the page before. An audit of the Code found
+// two passages in 373 off by one that way, both backwards. Looking one page
+// back costs nothing when the phrase is on the cited page, because that page
+// is still checked, and the exact-phrase test is what keeps it honest.
 async function locate() {
   const target = norm(phrase);
-  if (!target || lastPage <= wanted) return wanted;
+  const first = Math.max(1, wanted - 1);
+  if (!target) return wanted;
   const probes = probesFor(target);
-  for (let p = wanted; p <= Math.min(lastPage, pdf.numPages); p++) {
+  for (let p = first; p <= Math.min(Math.max(lastPage, wanted), pdf.numPages); p++) {
     const text = norm((await (await pdf.getPage(p)).getTextContent())
       .items.map(i => i.str).join(' '));
     if (probes.some(probe => text.includes(probe))) return p;

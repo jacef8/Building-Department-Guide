@@ -504,6 +504,19 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
        'the rule sending fee citations to the Fee Schedule is gone');
   }
 
+  // An audit of the Code and the Plan against their PDFs: 182 of 184 Comp Plan
+  // passages and 348 of 373 LDC passages sit on the page they name. The ones
+  // that do not are off by one BACKWARDS, because a passage split at the size
+  // limit opens with a tail carried from the previous page. The viewer
+  // therefore starts its search one page earlier.
+  {
+    const viewer = fs.readFileSync(path.join(ROOT, 'public/source.html'), 'utf8');
+    ok(/wanted - 1/.test(viewer),
+       'the source viewer no longer looks one page back, so a split passage lands on the wrong page');
+    ok(/probes\.some/.test(viewer),
+       'the viewer stopped matching on the exact phrase, so looking back could land anywhere');
+  }
+
   ok(/THE PAGE YOU CITE MUST BE THE PAGE THE FIGURE IS ON/.test(
          fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8')),
        'the rule forbidding a borrowed page number is gone');
