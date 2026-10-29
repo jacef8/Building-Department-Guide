@@ -212,6 +212,15 @@ textarea,input,select{font:inherit}
    full label width — 681px inside a 308px column — because max-width:100% was
    not clamping them, and the page scrolled sideways on a phone. A block row
    cannot do that, and the label still truncates rather than wrapping. */
+/* A code section or statute named inside a sentence. It has to read as a link
+   without turning a paragraph of them into a wall of blue: the maroon of the
+   rest of the app, underlined so it is not colour alone, and no glow. */
+.cite-link{color:var(--maroon);text-decoration:underline;text-decoration-thickness:1px;
+  text-underline-offset:2px;font-weight:700;white-space:nowrap}
+.cite-link:hover{background:var(--tint)}
+.cite-link:focus-visible{outline:2px solid var(--maroon);outline-offset:2px;border-radius:3px}
+.msg.user .bubble .cite-link{color:#fff}
+
 .citation-tag{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box;
   font-size:12.5px;font-weight:700;color:var(--maroon);background:var(--tint);
   border:1px solid var(--grid);border-radius:10px;padding:7px 11px;text-decoration:none;
@@ -1978,6 +1987,108 @@ function escapeHtml(str) {
 // added, so nothing in a model answer can inject markup.
 // Only http(s) links are ever turned into anchors, so a model answer can't
 // produce a javascript: or data: link. Input is already HTML-escaped.
+// ── citations inside the answer ─────────────────────────────────────
+// The sources listed under an answer have always been clickable. The
+// references inside the sentences were not, and those are the ones staff read
+// out to an applicant: "LDC Section 5.4(C)", "Policy 8-2", "s. 489.103(7)".
+// Checking one meant leaving the answer, opening the PDF and hunting.
+//
+// A Code section or a Plan policy is only linked when its page can actually be
+// resolved from the index. An unresolvable reference stays plain text rather
+// than becoming a link that lands on the wrong page, which is the failure this
+// tool has already had once with a borrowed page number.
+//
+// The discriminator between a Code section and a statute is the digits before
+// the point: the Land Development Code numbers its sections 1.2 through 8.x,
+// and a Florida Statute is three digits, 489.103 or 163.3187. Nothing in
+// either document breaks that.
+let CITE_MAP = null;
+
+function citeMap() {
+  if (CITE_MAP) return CITE_MAP;
+  const ldc = new Map(), plan = new Map();
+  for (const c of (REFERENCE_INDEX || [])) {
+    if (c.source === 'Land Development Code') {
+      const m = (c.section || '').match(/^(?:Sec\.|Section)\s+(\d+(?:[.\-][0-9A-Za-z]+)*)/i);
+      if (m && !ldc.has(m[1])) ldc.set(m[1], c);
+    } else if (c.source === 'Comprehensive Plan') {
+      const m = (c.section || '').match(/^(Policy|Objective|Goal)\s+([A-Z]?\d+(?:-[0-9A-Za-z]+)?)/i);
+      if (m) {
+        const key = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase() + ' ' + m[2].toUpperCase();
+        if (!plan.has(key)) plan.set(key, { first: c, pages: new Set() });
+        plan.get(key).pages.add(c.page);
+      }
+    }
+  }
+  // The Plan numbers its policies per element, so "Policy 1-2" exists in
+  // Future Land Use AND in Traffic Circulation AND in Conservation - 27 of
+  // its 58 numbers appear in more than one place, one of them on ten separate
+  // pages. A link on a number like that would land on whichever element
+  // happened to be indexed first, which is the wrong-page failure this file
+  // already fixed once. Only a number that sits in one run of pages is linked;
+  // the rest stay plain text. The Code has no such problem: all 62 of its
+  // section numbers are unique to one place.
+  for (const [key, v] of [...plan]) {
+    const ps = [...v.pages].sort((a, b) => a - b);
+    if (ps[ps.length - 1] - ps[0] > ps.length) plan.delete(key);
+    else plan.set(key, v.first);
+  }
+  CITE_MAP = { ldc, plan };
+  return CITE_MAP;
+}
+
+// the page in the served PDF, with the heading as the phrase to highlight
+function docUrl(chunk) {
+  const doc = DOC_LINKS[chunk.source];
+  if (!doc || !chunk.page) return null;
+  return '/source.html?doc=' + encodeURIComponent(doc)
+    + '&page=' + chunk.page
+    + (chunk.last && chunk.last > chunk.page ? '&last=' + chunk.last : '')
+    + '&label=' + encodeURIComponent(chunk.source)
+    + '&q=' + encodeURIComponent((chunk.section || '').slice(0, 60));
+}
+
+const STATUTE_YEAR = '2025';   // flsenate.gov serves a year per edition
+
+function linkCitations(html) {
+  const map = citeMap();
+  const cite = (href, label, external) =>
+    `<a class="cite-link" href="${href}"${external ? ' target="_blank" rel="noopener"' : ''}>${label}</a>`;
+
+  const section = (m, num) => {
+    const hit = map.ldc.get(num) || map.ldc.get(num.split('(')[0]);
+    const url = hit && docUrl(hit);
+    return url ? cite(url, m, false) : m;
+  };
+
+  // Each pattern runs OUTSIDE the links the earlier ones made. Guarding only
+  // at the end is not enough: "LDC Section 5.4(C)" is linked whole by the LDC
+  // pattern, and the bare-Section pattern then matched "Section 5.4(C)" inside
+  // that link's own label and nested a second anchor inside it.
+  const outsideLinks = (text, fn) =>
+    text.split(/(<a\b[^>]*>[\s\S]*?<\/a>)/g)
+      .map((part, i) => (i % 2 ? part : fn(part)))
+      .join('');
+
+  const passes = [
+    // s. 489.103(7)(a) · FS 163.3187 · Section 553.791, Florida Statutes
+    (t) => t.replace(/\b(?:(?:ss?\.|FS|F\.S\.)\s*|Section\s+(?=\d{3}\.))(\d{3}\.\d{2,4})((?:\([0-9a-z]+\))*)/gi,
+      (m, num) => cite(`https://www.flsenate.gov/Laws/Statutes/${STATUTE_YEAR}/${num}`, m, true)),
+    // LDC Section 5.4(C) · Land Development Code Section 4.6-3 · LDC 6.4-4(A)
+    (t) => t.replace(/\b(?:LDC|Land Development Code)(?:,?\s*(?:Section|Sec\.?))?\s*(\d{1,2}(?:[.\-][0-9A-Za-z]+)*)((?:\([0-9A-Za-z]+\))*)/gi, section),
+    // a bare "Section 5.4(C)" — one or two digits before the point, never a statute
+    (t) => t.replace(/\bSection\s+(\d{1,2}(?:[.\-][0-9A-Za-z]+)+)((?:\([0-9A-Za-z]+\))*)/g, section),
+    // Policy 8-2 · Objective 8, only where the number sits in one place
+    (t) => t.replace(/\b(Policy|Objective)\s+([A-Z]?\d+(?:-[0-9A-Za-z]+)?)/g, (m, kind, num) => {
+      const hit = map.plan.get(kind + ' ' + num.toUpperCase());
+      const url = hit && docUrl(hit);
+      return url ? cite(url, m, false) : m;
+    }),
+  ];
+
+  return passes.reduce((text, fn) => outsideLinks(text, fn), html);
+}
+
 function safeLink(url, label) {
   // A path of our own ("/docs/…") is as safe as an absolute http link and is
   // how the assistant refers to the documents this app serves. Anything else
@@ -1989,7 +2100,7 @@ function safeLink(url, label) {
 }
 
 function inlineMd(escaped) {
-  return escaped
+  const out = escaped
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     // [label](https://…) and [label](/docs/…)
     .replace(/\[([^\]]+)\]\(((?:https?:\/\/|\/)[^\s)]+)\)/gi, (m, label, url) => safeLink(url, label))
@@ -2002,6 +2113,7 @@ function inlineMd(escaped) {
       const clean = trailing ? url.slice(0, -trailing[0].length) : url;
       return pre + safeLink(clean, clean) + (trailing ? trailing[0] : '');
     });
+  return linkCitations(out);
 }
 
 function isTableDivider(line) {

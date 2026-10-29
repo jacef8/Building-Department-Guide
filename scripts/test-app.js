@@ -504,6 +504,32 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
        'the rule sending fee citations to the Fee Schedule is gone');
   }
 
+  // Code sections and statutes named inside an answer are clickable. They are
+  // what staff read out to an applicant, and checking one used to mean leaving
+  // the answer and hunting through the PDF.
+  {
+    const link = (t) => (sb.inlineMd(t).match(/class="cite-link"/g) || []).length;
+    for (const t of ['LDC Section 5.4(C) sets the minimum lot size',
+                     'See Section 4.6-3 for the referral triggers',
+                     'Land Development Code Section 6.4-4(A) is the wellfield rule',
+                     'Comprehensive Plan Policy 8-2 allows the split'])
+      ok(link(t) === 1, `no link made for a Code or Plan reference: "${t}"`);
+    for (const t of ['Required under s. 489.103(7), Florida Statutes',
+                     'FS 163.3187 sets the small-scale threshold',
+                     'The threshold is in s. 713.135'])
+      ok(link(t) === 1, `no link made for a statute: "${t}"`);
+
+    // The Plan numbers policies per element, so half its numbers point at
+    // several places. Those must stay plain rather than land on the wrong one.
+    for (const t of ['Policy 1-2 says the land use line follows the property line',
+                     'Objective 1 covers growth management'])
+      ok(link(t) === 0, `an ambiguous Plan reference was linked and will land on the wrong element: "${t}"`);
+
+    ok(link('Nothing to link in this sentence at all') === 0, 'plain prose is being linked');
+    ok(/text-decoration:underline/.test(ruleBody('.cite-link')),
+       'citation links are colour only, with nothing to see in print or for a colour-blind reader');
+  }
+
   // The site plan. It used to be a rotatable 3D scene under a heading saying
   // "to scale", which perspective makes impossible to measure, and it drew a
   // 200 ft well exclusion circle on residential parcels.
