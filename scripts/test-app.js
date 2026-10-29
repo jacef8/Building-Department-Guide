@@ -313,9 +313,16 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
 {
   const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
   ok(/model:\s*'claude-sonnet-5-5'/.test(server), 'the model is no longer Sonnet 5.5');
-  ok(/thinking:\s*\{\s*type:\s*'between_tools'\s*\}/.test(server),
-     'thinking is not switched off - answers will pause before the first word');
-  ok(/retrying without it/.test(server), 'the fallback for a rejected thinking field is gone');
+  // Thinking was off for speed until 2026-10-28, when Jace said completeness
+  // and correctness beat the wait and the cost. These pin that decision.
+  ok(/thinking:\s*\{\s*type:\s*'adaptive'\s*\}/.test(server),
+     'thinking is off again - the tool is back to answering before it has read the passages');
+  ok(/effort:\s*'xhigh'/.test(server), 'effort has dropped below xhigh');
+  const mt = server.match(/max_tokens: isGuide \? (\d+) : \(.*?: (\d+)\)/);
+  ok(mt && Number(mt[1]) >= 8000, 'the walkthrough token budget has been cut back');
+  ok(mt && Number(mt[2]) >= 4000, 'the single-answer token budget has been cut back');
+  ok(/retrying without them/.test(server),
+     'the fallback for a rejected thinking or effort field is gone');
   ok(/Do NOT retract it/.test(server),
      'the rule stopping the model disowning an earlier cited answer is gone');
 }

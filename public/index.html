@@ -879,7 +879,7 @@ const WHOLE_SECTION = new Set(['Land Development Code', 'Comprehensive Plan']);
 //
 // What sits above a rule usually carries its scope, so the text before the hit
 // is taken first.
-function withWholeSection(picked, eitherSide = 3, total = 14, maxRun = 24) {
+function withWholeSection(picked, eitherSide = 4, total = 24, maxRun = 24) {
   if (!Array.isArray(REFERENCE_INDEX) || !REFERENCE_INDEX.length) return picked;
   if (withWholeSection._for !== REFERENCE_INDEX) {
     withWholeSection._for = REFERENCE_INDEX;
@@ -2678,7 +2678,10 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
     // wider net; single lookups stay tight to avoid diluting the context.
     await loadReferenceIndex();   // full LDC / Comp Plan text, fetched once
     const chunkScores = new Map();
-    const scored = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9,
+    // Widened 2026-10-28 on Jace's instruction that completeness beats speed
+    // and cost. A missed passage is how a rule reaches the counter without the
+    // condition attached to it.
+    const scored = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 24 : 14,
                                   chunkScores, shipInContext(messages), docMode);
     // the rest of each Code or Plan section travels with the hit, so a rule
     // never reaches the model without the heading that says when it applies

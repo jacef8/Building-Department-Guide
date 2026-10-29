@@ -216,6 +216,22 @@ WHEN A THRESHOLD DECIDES THE ANSWER:
 // In the same conversation, asked about density with central water only, the
 // answer invented a "2-4 units per acre" middle case that is in no document,
 // presented it in a table, and only withdrew it when challenged.
+const VOICE_RULES = `
+
+HOW IT SHOULD READ. These answers are read at a counter and repeated to applicants, so they have to sound like a person who knows the answer, not like a chatbot. Every example below is taken from an answer this tool has actually given.
+
+- Lead with the answer. Do not announce it first. Cut openers like "Here is how it works", "A few related points", "Let's look at", "It is important to note", "Here is what the material says". Start with the thing the reader came for.
+- Do NOT put a bold label and a colon at the front of a list item. Write "Every lot must front on a street for at least 60 feet", not "**Street frontage:** Every lot must front on a street for at least 60 feet". If every line in your list opens with a bolded word, write it as ordinary sentences instead. Tables are fine and often better than a list; a table of figures does not need bolded row labels either.
+- Do NOT write "not X, but Y", "it is not just X, it is Y", or "X is not the only Y". Say the thing itself. Instead of "The minimum lot size is not the only limit", write "Density also limits how many homes the parcel can hold, and it usually decides the answer before lot size does".
+- Do not finish with a line that restates what you already said, and do not end every answer the same way.
+- Use is, are and has. Not "serves as", "functions as", "features", "offers", "represents".
+- Avoid these words: key, crucial, pivotal, robust, comprehensive, essential, delve, leverage, landscape and navigate used figuratively, underscore, highlight as a verb, a testament to, plays a role in, ensure where "make sure" works.
+- No em dashes or en dashes. Use a comma, a colon, a full stop or brackets.
+- Vary the length of your sentences. Several medium-length sentences in a row is the sound of a machine.
+- Say the unwelcome part plainly when there is one. "One acre in Agriculture cannot hold a second home" is more use at a counter than a careful paragraph that circles it.
+- Where the material does not settle something, say which part is unsettled and who decides it. Do not pad the answer to cover the gap.
+- The closing line telling the reader to confirm with the Building Department is required. Write it once, plainly, at the end.`;
+
 const REASONING_RULES = `
 
 WORKING OUT AN ANSWER — applies to every answer:
@@ -420,6 +436,7 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
     + FEE_RULES
     + REASONING_RULES
     + CITATION_RULES
+    + VOICE_RULES
     + (refMaterial.startsWith('ACTIVE PARCEL') ? PARCEL_RULES : '')
     + (attached.blocks.length ? ATTACHMENT_RULES : '')
     + (isGuide ? GUIDE_FORMAT : '');
@@ -443,15 +460,20 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
   try {
     const requestBody = {
       model: 'claude-sonnet-5-5',
-      // Sonnet 5.5 runs adaptive thinking whenever `thinking` is left out,
-      // which would put a pause before the first word of every answer. The
-      // counter needs the fast lookup, so thinking stays off. `between_tools`
-      // is the documented off switch on this model; `disabled` returns a 400.
-      thinking: { type: 'between_tools' },
-      // A full project walkthrough (steps + checklist + fee table) doesn't
-      // fit in the single-answer budget.
-      // Describing a drawing or a photo needs more room than a fee lookup.
-      max_tokens: isGuide ? 2500 : (attached.blocks.length ? 2000 : 1000),
+      // Thinking was switched off here for speed, back when the first word
+      // arriving in a second and a half was the thing being optimised. Jace,
+      // 2026-10-28: "i dont care how long the wait is or the token credit
+      // cost. i want the info complete and correct." This tool is quoted to
+      // applicants, so it reads the passages properly before it answers.
+      thinking: { type: 'adaptive' },
+      // xhigh rather than the model's default of high, for the same reason.
+      // The questions that go wrong here are the ones needing several passages
+      // held together - a density against an acreage, a rule against the
+      // heading that scopes it - and that is what effort buys.
+      output_config: { effort: 'xhigh' },
+      // Room to lay out the conditions on a rule instead of truncating them.
+      // A cut-off answer about a setback is worse than a slow one.
+      max_tokens: isGuide ? 8000 : (attached.blocks.length ? 6000 : 4000),
       system: systemPrompt,
       // Media blocks must come BEFORE the text block, per the API docs.
       messages: [...priorTurns, {
@@ -469,10 +491,10 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
     // be reported as ordinary JSON with a status code.
     if (anthropicResponse.status === 400) {
       const errText = await anthropicResponse.text().catch(() => '');
-      if (/thinking/i.test(errText)) {
-        console.warn('Model rejected the thinking field; retrying without it:', errText);
-        const { thinking, ...withoutThinking } = requestBody;
-        anthropicResponse = await askAnthropic(withoutThinking);
+      if (/thinking|output_config|effort/i.test(errText)) {
+        console.warn('Model rejected thinking or effort; retrying without them:', errText);
+        const { thinking, output_config, ...plain } = requestBody;
+        anthropicResponse = await askAnthropic(plain);
       } else {
         console.error('Anthropic API error: 400', errText);
         return res.status(502).json({ error: 'Anthropic API returned status 400' });
