@@ -504,6 +504,25 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
        'the rule sending fee citations to the Fee Schedule is gone');
   }
 
+  // A staff member asked this tool twice what it could do and was told to ask
+  // a supervisor both times. It knew the Code and not itself.
+  {
+    for (const q of ['does the tool show a building sketch',
+                     'what does the site plan in the sidebar do',
+                     'what is the site plan tool for',
+                     'i thought the tool would show a sketch like the appraiser'])
+      ok(sb.retrieveChunks(q, 9, new Map()).some(c => /What this assistant shows/i.test(c.section || '')),
+         `the tool still cannot answer a question about itself: "${q}"`);
+    const self = sb.retrieveChunks('what does the site plan tool show', 9, new Map())
+      .find(c => /What this assistant shows/i.test(c.section || ''));
+    ok(self && /NOT the Property Appraiser's building sketch/i.test(self.text),
+       'the entry no longer says the tool does not show the Appraiser building sketch');
+    ok(self && /NOT a site plan in the sense the Code uses/i.test(self.text),
+       'the entry no longer separates the panel drawing from the site plan an applicant submits');
+    ok(/class="pb-pa"/.test(html) && /qpublic\.schneidercorp\.com/.test(html),
+       'the parcel panel lost its link to the Property Appraiser, where the sketch actually lives');
+  }
+
   // Code sections and statutes named inside an answer are clickable. They are
   // what staff read out to an applicant, and checking one used to mean leaving
   // the answer and hunting through the PDF.

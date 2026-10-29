@@ -215,6 +215,10 @@ textarea,input,select{font:inherit}
 /* A code section or statute named inside a sentence. It has to read as a link
    without turning a paragraph of them into a wall of blue: the maroon of the
    rest of the app, underlined so it is not colour alone, and no glow. */
+.pb-pa{display:inline-block;margin:0 10px 0 0;font-size:12.5px;font-weight:700;color:var(--maroon);
+  text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+.pb-pa:hover{background:var(--tint)}
+
 .cite-link{color:var(--maroon);text-decoration:underline;text-decoration-thickness:1px;
   text-underline-offset:2px;font-weight:700;white-space:nowrap}
 .cite-link:hover{background:var(--tint)}
@@ -521,6 +525,19 @@ const KNOWLEDGE_BASE = [
     "Manufactured housing, relocation and lot rent assistance: awarded as a GRANT, not a loan — there is no loan term, no forgiveness, no repayment and no default provision. " +
     "Manufactured housing, rehabilitation and emergency repairs: a loan at 0% secured by a note and mortgage or lien, with a TEN-year term rather than five, forgiven at the end of the term, no repayment while the loan is in good standing, and default on sale, transfer or conveyance, conversion to a rental property, loss of homestead exemption, or failure to occupy the home as a primary residence. " +
     "These are maximum awards, not entitlements, and an applicant still has to qualify on income and on the strategy's own conditions. Note that the $350,000 figure in the plan is NOT Liberty County's allocation — it is the statutory threshold under which a small county may use up to 10 percent of programme income for administrative costs. The plan does not state the county's annual SHIP allocation." },
+
+  // A staff member asked this tool twice what it could do and got "the
+  // material I have says nothing about that, ask a supervisor" both times. It
+  // knew the Code and not itself, which reads as broken. This entry is what it
+  // knows about its own panels.
+  { source: "Office Procedure", section: "What this assistant shows, and what it does not", text:
+    "WHAT THE TOOL ITSELF DOES. Answer questions about the assistant, the sidebar, the side panel, the site plan tool, the diagram, the drawing or the picture from this entry rather than sending someone to a supervisor; a supervisor cannot tell them what this app renders either. " +
+    "THE PARCEL PANEL, after a parcel number, owner name or road is typed in: the tax roll fields for that parcel (owner, site address, use code, land area, legal description, section-township-range, buildings, heated living area, year built, just value, homestead), the other parcels numbered under the same root, and a future land use picker that staff set by reading the Future Land Use Map, after which density is calculated for the parcel. " +
+    "THE SITE PLAN in that panel is a scale drawing of the LOT, not of the building. It shows the lot as a square of the recorded acreage, the setback inset, what is left inside it, and a house footprint that the staff member drags to where the house actually is. " +
+    "WHAT IT IS NOT, and these are the three things people expect and do not get. It is NOT the Property Appraiser's building sketch. That sketch is a footprint of the house with its own room dimensions and areas, it lives on the Appraiser's record for the parcel, and this app cannot fetch or display it. Use the Property Appraiser link in the parcel panel. " +
+    "It is NOT the real mapped shape of the lot. The tax roll carries area, not dimensions, so a long narrow parcel draws as a square of the same acreage. " +
+    "And it is NOT a site plan in the sense the Code uses. A Planning & Zoning Permit needs a site plan from the applicant, hand-drawn on blank paper if they like, showing existing and proposed structures, the size of the home, the power pole, the septic system, the driveway and the other improvements. A footprint sketch from the tax roll cannot stand in for that, because it carries no property lines, setbacks, street or north arrow. " +
+    "WHEN THE ROLL AND A SKETCH DISAGREE, say so and do not pick one. A roll heated-living-area figure and a sketch base area measure different things and a difference between them is for the Property Appraiser to resolve, not the counter." },
 
   // Asked at the counter as "can a parent put a mobile home on their land for
   // their kid", which shares not one word with how the Plan says it —
@@ -2487,6 +2504,14 @@ function render() {
               </select>
               <a href="/docs/future-land-use-map.pdf" target="_blank" rel="noopener">Open map</a>
             </div>
+            <!-- Staff at the counter expected the panel to show the Property
+                 Appraiser's building sketch and it does not. This app cannot
+                 fetch one, so it points at the office that has it rather than
+                 leaving someone to assume the feature is broken. The URL is
+                 the search link the Appraiser publishes on libertypa.org. -->
+            <a class="pb-pa" target="_blank" rel="noopener"
+               href="https://qpublic.schneidercorp.com/Application.aspx?App=LibertyCountyFL&amp;Layer=Parcels&amp;PageType=Search"
+               title="Opens the Property Appraiser's own search, where the building sketch and photos live">Property Appraiser record &amp; building sketch &rsaquo;</a>
             <button class="pb-clear" onclick="clearActiveParcel()" title="Stop answering for this parcel">Clear parcel</button>
           </div>
         </div>
