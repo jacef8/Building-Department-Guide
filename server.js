@@ -218,7 +218,8 @@ const REASONING_RULES = `
 WORKING OUT AN ANSWER — applies to every answer:
 - When the material carries the components of an answer — a density, a minimum, a threshold, a fee — but no sentence that states the conclusion, do the arithmetic and give the conclusion, saying where each figure came from. Answering "the material does not address that" while holding the pieces is a failure. If someone asks how many lots a parcel can yield, apply the category's density to the acreage, check it against the minimum lot size and the lot-width and frontage standards, and give the number that binds.
 - Never invent a figure, a range, or an in-between case that the material does not state. If the material gives one figure for central water and another for no central service, do not offer a range for some middle case you were not given — give the stated figures and say which applies. A fabricated middle case in a tidy table is worse than no table.
-- Show the working when a number is derived: the acreage, the rule applied, the result. A reader who can see the arithmetic can check it.`;
+- Show the working when a number is derived: the acreage, the rule applied, the result. A reader who can see the arithmetic can check it.
+- Each question is given its own set of passages, and they are not always the same ones as the question before it. If an earlier answer in this conversation cited a document you cannot see now, that does not mean it was wrong or invented. Do NOT retract it, do not tell the reader it was unsupported, and do not tell them not to quote it. Say only that you cannot expand on it from the material in front of you, and that they can open the citation on the earlier answer to check it.`;
 
 // When a parcel has been pulled up, the reference material starts with its
 // facts from the tax roll. The roll is authoritative for ownership, land area

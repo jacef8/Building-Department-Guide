@@ -137,6 +137,20 @@ const phonePlaceholder = (afterTernary.match(/\?\s*'([^']*)'/) || [])[1];
 ok(phonePlaceholder && phonePlaceholder.length <= 25,
    `the phone placeholder is ${phonePlaceholder ? phonePlaceholder.length : '?'} characters; over 25 it wraps and clips`);
 
+// The same trap at desktop width, in staff mode. The staff page puts a sidebar
+// on one side and a parcel panel on the other, so its centre column is much
+// narrower than the public page's - and the long upload wording wrapped there,
+// putting a scrollbar on an empty box and cutting its own second line in half.
+// Measured in the browser at the app's own font: 54 characters needs about
+// 408px of box, 81 characters needs 592px.
+{
+  const desktopBranch = (html.match(/UPLOADS_ENABLED \? '([^']*)' : '([^']*)'/) || []).slice(1);
+  ok(desktopBranch.length === 2, 'the desktop placeholder pair could not be found to measure');
+  for (const ph of desktopBranch)
+    ok(ph.length <= 56,
+       `the desktop placeholder is ${ph.length} characters ("${ph}"); over about 56 it wraps in the staff column and has to be scrolled`);
+}
+
 // The answer column must be the piece that takes the leftover height. As a
 // two-row grid with three or more children, the NOTICE took the 1fr row and
 // stood 269px tall with the answer pushed under it and overlapping.
@@ -302,6 +316,8 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
   ok(/thinking:\s*\{\s*type:\s*'between_tools'\s*\}/.test(server),
      'thinking is not switched off - answers will pause before the first word');
   ok(/retrying without it/.test(server), 'the fallback for a rejected thinking field is gone');
+  ok(/Do NOT retract it/.test(server),
+     'the rule stopping the model disowning an earlier cited answer is gone');
 }
 
 
@@ -367,6 +383,35 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
     ok(limits && limits.text.includes(fig), `the limits entry lost the figure ${fig}`);
   ok(limits && /Liberty County only/i.test(limits.text),
      'the limits entry no longer says the other 66 counties do not apply');
+
+  // A conversation about SHIP stays about SHIP. Without this the gate shut on
+  // every natural follow-up, the housing documents vanished mid-conversation,
+  // and the model - seeing only permit material behind its own earlier answer -
+  // retracted correct figures and told the reader not to quote them.
+  {
+    const convo = [{ role: 'user', content: 'what are the ship strategies and the maximum award for each one' },
+                   { role: 'assistant', content: '...' }];
+    const shipAfter = (q, hist) => {
+      const h = (hist || []).concat([{ role: 'user', content: q }]);
+      return sb.retrieveChunks(q, 9, new Map(), sb.shipInContext(h)).filter(c => c.topic === 'ship').length;
+    };
+    for (const q of ['give me an example of lot rent assistance', 'can you give me a worked example',
+                     'how is that calculated', 'who qualifies for that', 'is that a grant or a loan',
+                     'how long does it last', 'what does an applicant have to bring'])
+      ok(shipAfter(q, convo) > 0,
+         `the follow-up "${q}" lost the SHIP documents - the model will disown its own earlier answer`);
+
+    // but a question that names its own permit subject is a new subject, not a
+    // follow-up, and must not be handed SHIP material just because SHIP came up
+    for (const q of ['what is the roofing permit fee', 'do i need a permit for a shed',
+                     'how far back from the property line', 'what inspections does a house need',
+                     'who can pull a pool permit'])
+      ok(shipAfter(q, convo) === 0,
+         `"${q}" pulled SHIP material because SHIP was discussed earlier in the conversation`);
+
+    ok(sb.shipAsked('give me an example of lot rent assistance'),
+       'the gate no longer recognises "lot rent assistance" on its own');
+  }
 
   // the strategy names and their awards print on different LHAP lines and land
   // in different passages, so this entry is what keeps them together

@@ -765,12 +765,34 @@ function chunkTokens(chunk) {
 // backslash there is the BACKSPACE character instead - which silently stops
 // "ship", "lhap", "hhrp" and "ami" matching anything at all. The suite checks
 // those four words specifically, because the failure is invisible by eye.
-const SHIP_GATE = /\bship\b|\blhap\b|\bhhrp\b|\bami\b|housing assistance|local housing|housing (program|plan|strateg)|income limit|rent limit|area median|median income|down ?payment|first[- ]time (home ?)?buyer|home ?buyer|(very|extremely) low[- ]income|moderate[- ]income|low[- ]income (household|applicant|famil)|set[- ]aside|owner[- ]occupied (rehab|repair|assistance)|housing (rehab|repair|replacement|counsel)|disaster (repair|assistance|mitigation) (program|funds|strateg)|special needs (housing|client)|purchase assistance|rental assistance|affordable housing|state housing initiatives/i;
+const SHIP_GATE = /\bship\b|\blhap\b|\bhhrp\b|\bami\b|housing assistance|local housing|housing (program|plan|strateg)|income limit|rent limit|area median|median income|down ?payment|first[- ]time (home ?)?buyer|home ?buyer|(very|extremely) low[- ]income|moderate[- ]income|low[- ]income (household|applicant|famil)|set[- ]aside|owner[- ]occupied (rehab|repair|assistance)|housing (rehab|repair|replacement|counsel)|disaster (repair|assistance|mitigation) (program|funds|strateg)|special needs (housing|client)|purchase assistance|rent(al)? assistance|lot rent|relocation assistance|affordable housing|state housing initiatives/i;
 
 function shipAsked(query) { return SHIP_GATE.test(query || ''); }
 
-function retrieveChunks(query, topN = 5, scoreOut = null) {
-  const wantShip = shipAsked(query);
+// A conversation is about SHIP for longer than any one sentence of it says so.
+// "Give me an example", "how is that calculated", "who qualifies", "is that a
+// grant or a loan" carry none of the vocabulary, and on the question alone the
+// gate shuts. The housing documents then vanish mid-conversation, the model is
+// left looking at permit material behind its own earlier answer, and it
+// concludes it must have invented the figures - so it retracts an answer that
+// was right and tells the reader not to quote it. That is far worse than the
+// leak the gate exists to prevent, so the recent turns are consulted too.
+function shipInContext(history, lookback = 3) {
+  return (history || [])
+    .filter(m => m && m.role === 'user')
+    .slice(-lookback)
+    .some(m => shipAsked(typeof m.content === 'string' ? m.content : ''));
+}
+
+// Carrying the conversation forward must not hand SHIP material to a question
+// that plainly stands on its own. "What is the roofing permit fee" asked right
+// after a SHIP question is a new subject, not a follow-up, and it should see
+// the permit documents only. A question naming its own permit subject closes
+// the gate again even mid-SHIP conversation; "how is that calculated" does not.
+const PERMIT_SUBJECT = /\bpermits?\b|\bfees?\b|setback|property line|how far|inspection|affidavit|zoning|\bplat\b|subdivision|certificate of occupancy|\broof|\bshed\b|\bbarn\b|\bpool\b|\bdeck\b|notice of commencement|building code|site plan|owner[- ]builder|contractor licen/i;
+
+function retrieveChunks(query, topN = 5, scoreOut = null, shipContext = false) {
+  const wantShip = shipAsked(query) || (shipContext && !PERMIT_SUBJECT.test(query || ''));
   const pool = KNOWLEDGE_BASE.concat(REFERENCE_INDEX)
     .filter(c => !c.topic || (c.topic === 'ship' && wantShip));
   const qRaw = tokenize(query);
@@ -2153,9 +2175,15 @@ function render() {
           <input type="file" id="fileInput" multiple accept=".pdf,image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="handleFilePick(event)">
           <button class="attach-btn" title="Attach a PDF or picture" aria-label="Attach a PDF or picture" onclick="document.getElementById('fileInput').click()" ${isLoading ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
         ` : ''}
+        <!-- Kept short enough to sit on one line. The box is one line tall with
+             overflow:auto, so a placeholder that wraps puts a scrollbar on an
+             empty box and cuts its own second line in half - which is what the
+             long staff wording did in the three-column staff layout, where the
+             centre column is far narrower than the public page. Measured: the
+             old staff string needed 592px of box, the staff column gives less. -->
         <textarea id="questionInput" rows="1" placeholder="${window.innerWidth <= 779
           ? 'Ask, or a parcel number'
-          : (UPLOADS_ENABLED ? 'Ask a question, attach a plan or photo, or type a parcel number, owner or road...' : 'Ask a question, or type a parcel number, owner name or road...')}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
+          : (UPLOADS_ENABLED ? 'Ask a question, attach a plan, or type a parcel number' : 'Ask a question, or type a parcel number or owner')}" onkeydown="handleKeydown(event)" onpaste="handlePaste(event)"></textarea>
         <button id="sendBtn" onclick="sendQuestion()" ${isLoading ? 'disabled' : ''}>${isLoading ? 'Thinking…' : 'Ask'}</button>
       </div>
     </main>
@@ -2484,7 +2512,8 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
     // wider net; single lookups stay tight to avoid diluting the context.
     await loadReferenceIndex();   // full LDC / Comp Plan text, fetched once
     const chunkScores = new Map();
-    const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9, chunkScores);
+    const relevantChunks = retrieveChunks(expandQuery(retrievalBase, isGuide), isGuide ? 18 : 9,
+                                          chunkScores, shipInContext(messages));
     // Everything retrieved is sent to the model; only the passages that
     // genuinely matched are listed to the reader as the basis of the answer.
     const shownSources = citableSources(relevantChunks, chunkScores, question);
