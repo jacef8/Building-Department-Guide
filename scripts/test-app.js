@@ -32,7 +32,7 @@ const sb = {
 sb.window = sb;
 vm.createContext(sb);
 vm.runInContext(script.replace(/^init\(\);$/m, '') +
-  '\nglobalThis.__gis=GIS_TO_FLU;globalThis.__flu=FLU_CATEGORIES;\nglobalThis.__kb=KNOWLEDGE_BASE;\nglobalThis.__setIndex=(a)=>{REFERENCE_INDEX=a;};', sb);
+  '\nglobalThis.__setStaff=(v)=>{IS_STAFF=v;};globalThis.__gis=GIS_TO_FLU;globalThis.__flu=FLU_CATEGORIES;\nglobalThis.__kb=KNOWLEDGE_BASE;\nglobalThis.__setIndex=(a)=>{REFERENCE_INDEX=a;};', sb);
 
 const index = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/docs/reference-index.json'), 'utf8'));
 sb.__setIndex(index);
@@ -682,7 +682,25 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
   ok(/FUTURE LAND USE FROM GIS/.test(srv), 'the model lost its rules for the GIS land use line');
   ok(/public Permit Assistant: you may state the future land use only when the GIS confidence is High/.test(srv),
      'the public assistant may now state a GIS land use that is not High confidence');
-  ok(fs.existsSync(path.join(ROOT, 'public/flum.html')), 'the land use measuring page is missing');
+  // Jace, 2026-10-29: "I don't want this to be a stand alone tool." It lives in the chat.
+  ok(!fs.existsSync(path.join(ROOT, 'public/flum.html')) && !/app\.get\('\/flum'/.test(srv),
+     'the land use lookup is a standalone page again; it belongs in the chat');
+  ok(!/Access-Control-Allow-Origin/.test(srv), 'the land use API answers other sites again');
+  ok(/MEASURED PARCELS/.test(srv), 'the model lost its rules for a set of measured parcels');
+  const email = 'I am doing an appraisal... Below are the four tax ids that comprise approximately 1,128 acres. 005-3S-8W-02681-000 005-3S-8W-02681-001 006-3S-8W-02682-000 007-3S-8W-02683-000';
+  ok(sb.extractAllParcelIds(email).length === 4, 'four parcel numbers in a pasted email are no longer all found');
+  ok(sb.extractAllParcelIds('can 0053S8W02681000 be split?').length === 1, 'a single parcel question is now read as a set');
+  ok(sb.parseDeededAcres(email) === 1128, 'the deeded acreage in a pasted email is no longer read');
+  ok(sb.parseDeededAcres('these parcels') === null, 'a deeded acreage is invented where none was given');
+  const meas = { parcels: [{ parcel_id: '005-3S-8W-02681-000', gis_acres: 438.4, land_use: [{ name: 'Agriculture', acres: 344.7 }, { name: 'Mixed Use Rural Residential', acres: 93.7 }], no_designation_acres: 0, confidence: { level: 'High', reasons: [] } }],
+    totals: { gis_acres: 438.4, land_use: [{ name: 'Agriculture', acres: 344.7, pct_of_designated: 78.6 }, { name: 'Mixed Use Rural Residential', acres: 93.7, pct_of_designated: 21.4 }], no_designation_acres: 0 },
+    deeded: null, not_found: [], confidence: { level: 'Medium', reasons: ['A land use line runs through the parcel.'] } };
+  sb.__setStaff(true);
+  const staffAns = sb.formatMeasure(meas);
+  ok(/\| Parcel \|/.test(staffAns) && /Confidence: Medium/.test(staffAns), 'staff no longer get the land use table with its confidence');
+  sb.__setStaff(false);
+  ok(!/\d+\.\d acres/.test(sb.formatMeasure(meas)) && /\(850\) 643-2215/.test(sb.formatMeasure(meas)),
+     'the public page now shows a land use measurement that is not High confidence');
   for (const fn of ['gisFluBlock', 'gisFluContextLine', 'ensureParcelFlu', 'useGisFlu', 'retryParcelFlu'])
     ok(typeof sb[fn] === 'function', `${fn}() went missing`);
   ok(Object.keys(sb.__gis).length >= 5 && Object.values(sb.__gis).every(c => sb.__flu[c]),

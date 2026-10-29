@@ -357,6 +357,7 @@ textarea,input,select{font:inherit}
   color:#fff;font-weight:700;font-size:13px;cursor:pointer}
 .pb-gis button:hover{background:#5E1623}
 .pb-gis a{color:var(--maroon);font-weight:700}
+.pb-gis .g-tip{font-size:12.5px;color:var(--ink-3)}
 
 /* ── staff sign-in ──────────────────────────────────────────────── */
 .signin{max-width:380px;margin:52px auto;padding:0 20px;text-align:center}
@@ -1605,6 +1606,9 @@ const isTouch = typeof window.matchMedia === 'function' && window.matchMedia('(p
 // every following question is answered for that property until it's cleared
 // or another parcel is looked up.
 let activeParcel = null;
+// The last set of parcels measured together for future land use, so follow-up
+// questions ("draft the reply", "what about deeded acres") can use it.
+let activeMeasure = null;
 let PARCEL_META = {};
 
 // Mode: the public locked-down assistant by default; the fuller internal
@@ -1831,6 +1835,7 @@ function persistActive() {
   // session: reopening "the Kerby split" should put Kerby's parcel back on the
   // counter, and opening an unrelated conversation must not leave it there.
   conv.parcel = activeParcel;
+  conv.measure = activeMeasure;
   conv.updated = Date.now();
   conversations = conversations.slice(0, MAX_CONVERSATIONS);
   saveHistory();
@@ -1839,6 +1844,7 @@ function persistActive() {
 function newConversation() {
   messages = [];
   activeParcel = null;
+  activeMeasure = null;
   toolsOpen = false;
   activeId = null;
   lastError = null;
@@ -1897,6 +1903,7 @@ function openConversation(id) {
   if (!conv) return;
   messages = conv.messages;
   activeParcel = conv.parcel || null;
+  activeMeasure = conv.measure || null;
   activeId = id;
   lastError = null;
   historyOpen = false;
@@ -2667,13 +2674,21 @@ async function sendQuestion() {
   // number inside it ("can 01-9S-3W-0000-1000 be split?") quietly sets that
   // parcel first, then answers the question against it.
   const embedded = outgoing.length ? null : extractParcelId(question);
-  if (embedded && looksLikeParcelId(question)) {
+  // Several parcel numbers in one message is a land use request for the set,
+  // usually an appraiser or a buyer asking how many acres are in each category.
+  const allIds = outgoing.length ? [] : extractAllParcelIds(question);
+  if (allIds.length >= 2) {
+    await runLandUseMeasure(allIds, question);
+  } else if (embedded && looksLikeParcelId(question)) {
     await runParcelLookup(question);
   } else if (!outgoing.length && !embedded && looksLikePropertySearch(question)
              && await runPropertySearch(question)) {
     /* the search found properties and has answered */
   } else {
     if (embedded) await loadParcel(embedded);
+    // A land use question about the parcel waits for the measurement, so the
+    // answer is worked from it rather than from "the category is not set".
+    if (embedded && activeParcel && LAND_USE_WORDS.test(question)) await parcelFluReady(activeParcel);
     await runKnowledgeBaseQuestion(question, outgoing);
   }
 
@@ -2761,6 +2776,7 @@ function sourceViewerUrl(s) {
 
 function clearActiveParcel() {
   activeParcel = null;
+  activeMeasure = null;
   render();
 }
 
@@ -2811,7 +2827,7 @@ const GIS_TO_FLU = {
   'Industrial': 'Industrial',
   'Institutional': 'Public Institutional',
 };
-const gisInFlight = new Set();
+const gisInFlight = new Map();   // parcel id -> the measurement promise
 
 function gisResult(p) {
   return p && p.gis && p.gis.status === 'ok' && p.gis.data && p.gis.data.parcels && p.gis.data.parcels[0];
@@ -2830,14 +2846,124 @@ function ensureParcelFlu() {
   if (!p || !p.id) return;
   if (p.gis && (p.gis.status === 'ok' || p.gis.status === 'error')) return;
   if (gisInFlight.has(p.id)) return;
-  gisInFlight.add(p.id);
   p.gis = { status: 'loading' };
-  fetch('/api/parcel-flu?id=' + encodeURIComponent(p.id))
+  const run = fetch('/api/parcel-flu?id=' + encodeURIComponent(p.id))
     .then(r => r.json().catch(() => ({ ok: false, error: 'unreadable reply' })))
     .then(d => { p.gis = d && d.ok ? { status: 'ok', data: d } : { status: 'error', error: (d && d.error) || 'no answer' }; })
     .catch(err => { p.gis = { status: 'error', error: err.message }; })
-    .then(() => { gisInFlight.delete(p.id); if (typeof persistActive === 'function') persistActive(); if (activeParcel === p) render(); });
+    .then(() => { gisInFlight.delete(p.id); if (typeof persistActive === 'function') persistActive(); if (activeParcel === p && !isLoading) render(); });
+  gisInFlight.set(p.id, run);
 }
+
+// Resolves once the parcel's measurement is in (or after a minute, so a slow
+// map server never holds the answer hostage).
+function parcelFluReady(p) {
+  if (!p) return Promise.resolve();
+  ensureParcelFlu();
+  const run = gisInFlight.get(p.id);
+  if (!run) return Promise.resolve();
+  return Promise.race([run, new Promise(r => setTimeout(r, 60000))]);
+}
+
+// ── several parcels at once, asked in the chat ─────────────────────
+// "Can you tell me how many acres of 005-3S-8W-02681-000, -001, 006-... are
+// Agriculture?" — usually an appraiser's email pasted in whole. Every parcel
+// number in the message is measured together, the result is answered as a
+// table, and if the message asked for more than the numbers (draft a reply,
+// explain the categories) the assistant answers that too, from the result.
+const LAND_USE_WORDS = /\b(future land use|land use|flum|designation|agricultur\w*|mixed use|rural residential|conservation|how many acres|acreage)\b/i;
+
+function extractAllParcelIds(text) {
+  const re = new RegExp(PARCEL_TOKEN.source, 'gi');
+  const seen = new Set(), out = [];
+  for (const m of String(text || '').matchAll(re)) {
+    const id = m[0];
+    if (!looksLikeParcelId(id)) continue;
+    const k = normaliseParcelKey(id);
+    if (!seen.has(k)) { seen.add(k); out.push(id); }
+  }
+  return out;
+}
+
+// "approximately 1,128 acres", "1128 deeded acres", "total 1,128 ac".
+// Only a figure of at least 1 acre; the biggest one in the message wins,
+// since a per-parcel acreage is never larger than the total.
+function parseDeededAcres(text) {
+  const vals = [...String(text || '').matchAll(/(\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\s*(?:\+\/-\s*)?(?:deeded\s+|gross\s+|total\s+)?(?:acres|acre|ac)\b/gi)]
+    .map(m => Number(m[0].replace(/[^\d.]/g, '').replace(/\.$/, ''))).filter(n => n >= 1 && n < 1e6);
+  return vals.length ? Math.max(...vals) : null;
+}
+
+const fmtAc = (n) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+function formatMeasure(d) {
+  const cats = d.totals.land_use.map(c => c.name);
+  const lines = [];
+  // the public page gets a measurement only when every parcel is solid
+  if (!IS_STAFF && d.confidence.level !== 'High') {
+    return 'The future land use for these parcels needs to be confirmed against the county\'s map. Please call the Liberty County Building Department at (850) 643-2215 and they will confirm it for each parcel.';
+  }
+  lines.push(`These ${d.parcels.length} parcels measure ${fmtAc(d.totals.gis_acres)} acres on the county GIS map. ` +
+    d.totals.land_use.map(c => `${c.name} is ${fmtAc(c.acres)} acres (${c.pct_of_designated}%)`).join(', ') + '.');
+  if (d.deeded) lines.push(`Applied to ${d.deeded.acres.toLocaleString('en-US')} deeded acres: ` +
+    d.deeded.split.map(x => `${x.name} about ${x.acres.toLocaleString('en-US')} acres`).join(', ') + '.');
+  lines.push('');
+  lines.push(`| Parcel | ${cats.join(' | ')} | No land use in GIS | GIS acres |${IS_STAFF ? ' Confidence |' : ''}`);
+  lines.push(`|---|${cats.map(() => '---:').join('|')}|---:|---:|${IS_STAFF ? '---|' : ''}`);
+  for (const p of d.parcels) {
+    const m = {}; p.land_use.forEach(u => { m[u.name] = u.acres; });
+    lines.push(`| ${p.parcel_id} | ${cats.map(c => (m[c] != null ? fmtAc(m[c]) : '0.0')).join(' | ')} | ${fmtAc(p.no_designation_acres)} | ${fmtAc(p.gis_acres)} |${IS_STAFF ? ` ${p.confidence.level} |` : ''}`);
+  }
+  lines.push(`| **Total** | ${d.totals.land_use.map(c => `**${fmtAc(c.acres)}**`).join(' | ')} | **${fmtAc(d.totals.no_designation_acres)}** | **${fmtAc(d.totals.gis_acres)}** |${IS_STAFF ? ` **${d.confidence.level}** |` : ''}`);
+  if (IS_STAFF) {
+    lines.push('');
+    lines.push(`**Confidence: ${d.confidence.level}.** The land use lines were moved 100 feet each way and the acres measured again. High means the answer barely moved.`);
+    d.confidence.reasons.forEach(r => lines.push(`- ${r}`));
+  }
+  if (d.not_found.length) lines.push(`\nNot found in the state parcel lines: ${d.not_found.join(', ')}. Check those numbers.`);
+  lines.push('');
+  lines.push('GIS acres come from mapped lines and will not match deeded acres exactly, so use the percentages against the deeded acreage. The GIS copy of the Future Land Use Map is from 2019; confirm on the adopted map if there has been an amendment since.');
+  return lines.join('\n');
+}
+
+// For the model, when a follow-up asks about the measured set.
+function measureContextBlock(d) {
+  const rows = d.parcels.map(p => `${p.parcel_id}: ${p.gis_acres} GIS acres; ` + p.land_use.map(u => `${u.name} ${u.acres} ac (${u.range_if_lines_off_100ft ? u.range_if_lines_off_100ft[0] + ' to ' + u.range_if_lines_off_100ft[1] + ' if lines 100 ft off' : ''})`).join('; ') +
+    (p.no_designation_acres >= 0.5 ? `; no land use in GIS ${p.no_designation_acres} ac` : '') + `; confidence ${p.confidence.level}`);
+  return [
+    'MEASURED PARCELS (future land use measured by overlaying the state parcel lines on the 2019 regional planning council GIS copy of the adopted Future Land Use Map; FUTURE LAND USE FROM GIS rules apply):',
+    ...rows,
+    `Totals: ${d.totals.gis_acres} GIS acres; ` + d.totals.land_use.map(c => `${c.name} ${c.acres} ac (${c.pct_of_designated}% of designated)`).join('; ') + (d.totals.no_designation_acres >= 0.5 ? `; no land use in GIS ${d.totals.no_designation_acres} ac (left out of the percentages)` : ''),
+    d.deeded ? `Deeded acres given: ${d.deeded.acres}; split by share: ` + d.deeded.split.map(x => `${x.name} about ${x.acres} ac`).join('; ') + `; mapped lines differ from deeded by ${d.deeded.gis_vs_deeded_pct}%` : 'No deeded acreage was given.',
+    `CONFIDENCE overall: ${d.confidence.level}. ${d.confidence.reasons.join(' ')}`,
+    d.not_found.length ? `Not found: ${d.not_found.join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+}
+
+async function runLandUseMeasure(ids, question) {
+  const deeded = parseDeededAcres(question);
+  let d;
+  try {
+    const r = await fetch('/api/flum', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parcels: ids, deeded_acres: deeded }),
+    });
+    d = await r.json().catch(() => ({ ok: false, error: 'unreadable reply' }));
+  } catch (err) { d = { ok: false, error: err.message }; }
+  if (!d || !d.ok) {
+    messages.push({ role: 'assistant', content: `I couldn't measure those parcels against the land use map (${(d && d.error) || 'no answer'}). The state map servers are sometimes slow; ask again in a minute, or read them off the [Future Land Use Map](/docs/future-land-use-map.pdf).` });
+    return;
+  }
+  activeMeasure = d;
+  messages.push({ role: 'assistant', content: formatMeasure(d), sources: [{ source: 'Future Land Use Map', section: 'GIS copy (2019), measured against Florida DOR parcel lines' }] });
+  // Anything asked beyond the numbers themselves ("help me answer this
+  // email", "what does Agriculture allow") is answered from the measurement.
+  const rest = question.replace(new RegExp(PARCEL_TOKEN.source, 'gi'), ' ').replace(/[^A-Za-z]+/g, ' ').trim();
+  if (rest.split(/\s+/).length >= 12 || /\b(draft|reply|respond|answer|email|letter|write)\b/i.test(rest)) {
+    await runKnowledgeBaseQuestion(question, []);
+  }
+}
+
 
 function retryParcelFlu() {
   if (!activeParcel) return;
@@ -2883,7 +3009,7 @@ function gisFluBlock(p) {
     ${mismatch ? `<div class="g-warn">The category set above is ${escapeHtml(p.flu)}, but the GIS map puts most of the parcel in ${escapeHtml(top)}. Check the adopted map.</div>` : ''}
     <div class="g-actions">
       ${top && p.flu !== top ? `<button type="button" onclick="useGisFlu()">Use ${escapeHtml(top)}${r.land_use.filter(u => u.acres >= 1).length > 1 ? ' (larger part)' : ''}</button>` : ''}
-      <a href="/flum" target="_blank" rel="noopener">Measure several parcels</a>
+      <span class="g-tip">To measure several parcels together, put all their numbers in one question.</span>
     </div>
   </div>`;
 }
@@ -2964,6 +3090,9 @@ async function runKnowledgeBaseQuestion(question, outgoing) {
 
     // The parcel on the counter goes in front of the reference material, so a
     // question like "can this be split?" is answered for that property.
+    if (activeMeasure) {
+      contextText = measureContextBlock(activeMeasure) + (contextText ? '\n\n---\n\n' + contextText : '');
+    }
     if (activeParcel) {
       contextText = parcelContextBlock(activeParcel) + (contextText ? '\n\n---\n\n' + contextText : '');
     }

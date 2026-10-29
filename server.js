@@ -254,6 +254,7 @@ THE PARCEL ON THE COUNTER — the reference material opens with an ACTIVE PARCEL
 - A "Future land use category" line set by staff is the category of record for this conversation. Use it.
 - A "FUTURE LAND USE FROM GIS" line is a measurement, not the roll: the parcel line overlaid on the county's GIS copy of the Future Land Use Map (dated 2019), with acres per category and a CONFIDENCE of High, Medium or Low. The rating comes from moving the map lines 100 feet each way and measuring again. A staff-set category takes precedence over it.
 - If you are the internal staff assistant: when the question turns on future land use and no category is set by staff, use the GIS line. Say the category and acres come from the GIS map, give the confidence in one short clause with its main reason, and work the answer from it (density times acres, split by category where the parcel is split). If confidence is Medium or Low, or the staff-set category disagrees with the GIS line, say it should be checked on the adopted map before it is quoted to an applicant. Do not repeat every reason.
+- A "MEASURED PARCELS" block is the same measurement for several parcels named in one question, already shown to the reader as a table. Do not repeat the table. Answer what else was asked from it. If asked to draft a reply (for example to an appraiser), give the acres by category per parcel and in total, apply the percentages to the deeded acres when they were given, say plainly that the figures are measured from the county's GIS copy of the Future Land Use Map (2019) and that GIS acres differ from deeded acres, and state the confidence in one sentence. Write the reply in plain sentences ready to paste.
 - If you are the public Permit Assistant: you may state the future land use only when the GIS confidence is High and the whole parcel is in one category, and then as what the county's GIS map shows, as general information. Otherwise do not state a category or mention the measurement, its confidence or any uncertainty; give the general rule and invite the person to call the Liberty County Building Department at (850) 643-2215 to confirm the category for their parcel.
 - The tax roll use code describes how the property is assessed, not what it is permitted or zoned for. Do not present it as zoning.
 - If the block says the acreage fields disagree, say the acreage needs confirming with the Property Appraiser rather than relying on the number.
@@ -443,7 +444,7 @@ app.post('/api/ask', attachStaff, perIpLimiter, dailyAskCap, async (req, res) =>
     + REASONING_RULES
     + CITATION_RULES
     + VOICE_RULES
-    + (refMaterial.startsWith('ACTIVE PARCEL') ? PARCEL_RULES : '')
+    + (/^(ACTIVE PARCEL|MEASURED PARCELS)/.test(refMaterial) ? PARCEL_RULES : '')
     + (attached.blocks.length ? ATTACHMENT_RULES : '')
     + (isGuide ? GUIDE_FORMAT : '');
   const systemPrompt = `${guardrails}\n\nREFERENCE MATERIAL:\n${refMaterial}`;
@@ -781,15 +782,10 @@ async function cachedFlum(ids, deeded, withMap) {
   return body;
 }
 
-// Other county tools may call this, so it answers cross-origin.
-function flumCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'content-type');
-}
-app.options('/api/flum', (req, res) => { flumCors(res); res.sendStatus(204); });
+// Several parcels at once, for a question in the chat that names more than
+// one parcel number. Same-origin only: this is part of the assistant, not a
+// separate tool.
 app.all('/api/flum', perIpFlumLimiter, async (req, res) => {
-  flumCors(res);
   try {
     const split = (s) => String(s || '').split(/[\s,;]+/).filter(Boolean);
     const b = req.method === 'POST' ? (req.body || {}) : {};
@@ -814,8 +810,6 @@ app.get('/api/parcel-flu', perIpFlumLimiter, async (req, res) => {
     res.status(err.status || 502).json({ ok: false, error: err.message || String(err) });
   }
 });
-
-app.get('/flum', (req, res) => res.sendFile(path.join(__dirname, 'public', 'flum.html')));
 
 // Health check — handy for Railway
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
