@@ -485,7 +485,26 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
       ok(near, `an expanded passage (${c.source} p${c.page}) is not next to any hit it was added for`);
     }
 
-    ok(/THE PAGE YOU CITE MUST BE THE PAGE THE FIGURE IS ON/.test(
+    // Pages that were cited but did not hold the figure. Each page below was
+  // confirmed against its PDF before being written into the entry.
+  {
+    const kbHas = (re) => sb.retrieveChunks('density by land use category', 14, new Map())
+      .some(c => re.test(c.text));
+    ok(kbHas(/Comprehensive Plan, page 7/),
+       'the Agriculture density lost its real page (7); it was cited to page 1, which holds none of it');
+    ok(!/section: "Future Land Use — Density by Category", page: 1,/.test(html),
+       'the density entry is back on page 1');
+    ok(!/source: "HB 803 Memo", section: "[^"]*", page: 1,/.test(html),
+       'an HB 803 Memo entry is back on page 1; the $7,500 threshold is on page 7');
+    // $2,500 appears in NO document this app serves - it is statutory
+    ok(/713\.135/.test(html),
+       'the Notice of Commencement threshold is stated without the statute that sets it, and no served document carries it');
+    ok(/A DOLLAR AMOUNT IS ALWAYS CITED TO THE 2026 FEE SCHEDULE/.test(
+         fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8')),
+       'the rule sending fee citations to the Fee Schedule is gone');
+  }
+
+  ok(/THE PAGE YOU CITE MUST BE THE PAGE THE FIGURE IS ON/.test(
          fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8')),
        'the rule forbidding a borrowed page number is gone');
     ok(/Section 5\.4\(C\), page 115/.test(html),
