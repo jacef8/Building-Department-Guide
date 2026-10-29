@@ -62,13 +62,14 @@ const RL_MAX_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 12);
 const DAILY_ASK_CAP = Number(process.env.DAILY_ASK_CAP || 1500);
 const ipHits = new Map();     // ip -> array of recent request timestamps (AI)
 const parcelHits = new Map(); // the same, for parcel lookups
+const flumHits = new Map();   // the same, for future land use measurements
 let askDay = '';
 let askCount = 0;
 
 // periodic cleanup so the IP map doesn't grow forever
 setInterval(() => {
   const cutoff = Date.now() - RL_WINDOW_MS;
-  for (const store of [ipHits, parcelHits]) {
+  for (const store of [ipHits, parcelHits, flumHits]) {
     for (const [ip, ts] of store) {
       const kept = ts.filter(t => t > cutoff);
       if (kept.length) store.set(ip, kept); else store.delete(ip);
@@ -250,6 +251,10 @@ const PARCEL_RULES = `
 THE PARCEL ON THE COUNTER — the reference material opens with an ACTIVE PARCEL block:
 - Those facts are from the county's assessment roll and are reliable for that property: who owns it, its land area, its legal description, and what is already built on it. Apply the rules to those facts instead of answering in the abstract — if the question is whether the property can be split, use its actual acreage; if it is about building, use whether the roll shows existing structures.
 - The roll does NOT contain zoning, the future land use category, the flood zone, or river/wetland buffers. Never state or infer any of those from it. Where the answer depends on one, say plainly that the future land use category (or flood zone) has to be confirmed on the county's map first, and give the rest of the answer.
+- A "Future land use category" line set by staff is the category of record for this conversation. Use it.
+- A "FUTURE LAND USE FROM GIS" line is a measurement, not the roll: the parcel line overlaid on the county's GIS copy of the Future Land Use Map (dated 2019), with acres per category and a CONFIDENCE of High, Medium or Low. The rating comes from moving the map lines 100 feet each way and measuring again. A staff-set category takes precedence over it.
+- If you are the internal staff assistant: when the question turns on future land use and no category is set by staff, use the GIS line. Say the category and acres come from the GIS map, give the confidence in one short clause with its main reason, and work the answer from it (density times acres, split by category where the parcel is split). If confidence is Medium or Low, or the staff-set category disagrees with the GIS line, say it should be checked on the adopted map before it is quoted to an applicant. Do not repeat every reason.
+- If you are the public Permit Assistant: you may state the future land use only when the GIS confidence is High and the whole parcel is in one category, and then as what the county's GIS map shows, as general information. Otherwise do not state a category or mention the measurement, its confidence or any uncertainty; give the general rule and invite the person to call the Liberty County Building Department at (850) 643-2215 to confirm the category for their parcel.
 - The tax roll use code describes how the property is assessed, not what it is permitted or zoned for. Do not present it as zoning.
 - If the block says the acreage fields disagree, say the acreage needs confirming with the Property Appraiser rather than relying on the number.
 - Do not repeat the whole parcel block back. Refer to the property by its parcel number and use only the facts that bear on the question.
@@ -752,6 +757,65 @@ function relatedParcels(p) {
     .slice(0, 20)
     .map(o => ({ id: o.id, own: o.own, acres: o.acres, adr: o.adr, splt: o.splt, uc: o.uc }));
 }
+
+// ── Future land use by parcel ─────────────────────────────────────────
+// The roll has no future land use, so lib/flum.js overlays the state's parcel
+// lines on the statewide future land use layer and measures the acres in each
+// category, with a confidence rating from a 100-foot boundary-shift test.
+// Each measurement makes three calls to state and federal map servers and can
+// take 10 to 40 seconds, so results are cached and the limiter is tighter than
+// the roll lookup's. The data is public; nothing here touches the API key.
+const flum = require('./lib/flum');
+const FLU_CACHE = new Map();               // sorted ids + deeded -> result
+const FLU_TTL_MS = 12 * 60 * 60 * 1000;
+const FLUM_MAX_PER_MIN = Number(process.env.FLUM_LIMIT_PER_MIN || 10);
+const perIpFlumLimiter = makeLimiter(flumHits, FLUM_MAX_PER_MIN);
+
+async function cachedFlum(ids, deeded, withMap) {
+  const key = JSON.stringify([ids.map(flum.parseId).map(p => (p ? p.key : '')).sort(), deeded || 0, !!withMap]);
+  const hit = FLU_CACHE.get(key);
+  if (hit && Date.now() - hit.at < FLU_TTL_MS) return hit.body;
+  const body = await flum.lookup(ids, deeded, withMap);
+  FLU_CACHE.set(key, { at: Date.now(), body });
+  if (FLU_CACHE.size > 500) FLU_CACHE.delete(FLU_CACHE.keys().next().value);
+  return body;
+}
+
+// Other county tools may call this, so it answers cross-origin.
+function flumCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+}
+app.options('/api/flum', (req, res) => { flumCors(res); res.sendStatus(204); });
+app.all('/api/flum', perIpFlumLimiter, async (req, res) => {
+  flumCors(res);
+  try {
+    const split = (s) => String(s || '').split(/[\s,;]+/).filter(Boolean);
+    const b = req.method === 'POST' ? (req.body || {}) : {};
+    const ids = req.method === 'POST'
+      ? (Array.isArray(b.parcels) ? b.parcels.map(String) : split(b.parcels))
+      : split(req.query.parcels);
+    const deeded = Number(req.method === 'POST' ? b.deeded_acres : req.query.deeded) || undefined;
+    const withMap = req.method === 'POST' ? !!b.map : req.query.map === '1';
+    res.json(await cachedFlum(ids, deeded, withMap));
+  } catch (err) {
+    res.status(err.status || 502).json({ ok: false, error: err.message || String(err) });
+  }
+});
+
+// One parcel, for the parcel panel. Same measurement, no map geometry.
+app.get('/api/parcel-flu', perIpFlumLimiter, async (req, res) => {
+  const id = String(req.query.id || '').trim().toUpperCase();
+  if (!/^[A-Z0-9-]{8,30}$/.test(id) || !flum.parseId(id)) return res.status(400).json({ ok: false, error: 'Bad parcel id.' });
+  try {
+    res.json(await cachedFlum([id], undefined, false));
+  } catch (err) {
+    res.status(err.status || 502).json({ ok: false, error: err.message || String(err) });
+  }
+});
+
+app.get('/flum', (req, res) => res.sendFile(path.join(__dirname, 'public', 'flum.html')));
 
 // Health check — handy for Railway
 app.get('/health', (req, res) => res.json({ status: 'ok' }));

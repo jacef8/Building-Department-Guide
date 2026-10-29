@@ -340,6 +340,23 @@ textarea,input,select{font:inherit}
 .pb-clear{min-height:38px;padding:0 13px;border-radius:10px;border:1px solid var(--line);
   background:var(--surface);color:var(--ink-2);font-weight:700;font-size:13px;align-self:flex-start}
 .pb-clear:hover{background:var(--surface-2);color:var(--bad)}
+/* future land use measured from the GIS map */
+.pb-gis{border:1px solid var(--line);border-left:4px solid var(--gold-rule,#C1B572);border-radius:10px;padding:10px 12px;
+  background:var(--surface);font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.pb-gis.High{border-left-color:var(--ok)} .pb-gis.Medium{border-left-color:#B07D10} .pb-gis.Low{border-left-color:var(--bad)}
+.pb-gis .g-head{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--ink-3);margin-bottom:4px}
+.pb-gis .g-rows{margin:0;padding:0;list-style:none}
+.pb-gis .g-rows li{display:flex;justify-content:space-between;gap:10px;font-weight:650;color:var(--ink);font-variant-numeric:tabular-nums}
+.pb-gis .g-conf{margin-top:7px;font-weight:800;color:var(--ink)}
+.pb-gis .g-conf.High{color:var(--ok)} .pb-gis .g-conf.Medium{color:#8A6200} .pb-gis .g-conf.Low{color:var(--bad)}
+.pb-gis .g-why{margin:3px 0 0;padding-left:17px}
+.pb-gis .g-why li{margin:2px 0}
+.pb-gis .g-warn{margin-top:7px;color:var(--bad);font-weight:700}
+.pb-gis .g-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:9px}
+.pb-gis button{min-height:38px;padding:0 13px;border-radius:10px;border:1px solid var(--maroon);background:var(--maroon);
+  color:#fff;font-weight:700;font-size:13px;cursor:pointer}
+.pb-gis button:hover{background:#5E1623}
+.pb-gis a{color:var(--maroon);font-weight:700}
 
 /* ── staff sign-in ──────────────────────────────────────────────── */
 .signin{max-width:380px;margin:52px auto;padding:0 20px;text-align:center}
@@ -1498,7 +1515,7 @@ function parcelPermitNotes(p) {
 function parcelContextBlock(p) {
   const use = parcelUseLabel(p);
   return [
-    `ACTIVE PARCEL (Liberty County ${PARCEL_META.assessmentYear || ''} tax roll, assessed January 1 — ownership and improvements only, NOT zoning, NOT future land use, NOT flood zone):`,
+    `ACTIVE PARCEL (Liberty County ${PARCEL_META.assessmentYear || ''} tax roll, assessed January 1 — ownership and improvements only, NOT zoning, NOT flood zone; the roll has no future land use, which comes only from the staff-set line or the GIS line below):`,
     `Parcel number: ${p.id}`,
     `Owner: ${p.own || 'not on the roll'}${p.hs ? ' (homestead exemption — owner-occupied)' : ''}`,
     `Owner mailing: ${[p.oad, p.oci, p.ost, p.ozp].filter(Boolean).join(' ') || 'not on the roll'}`,
@@ -1510,13 +1527,14 @@ function parcelContextBlock(p) {
     `Improvements: ${p.bld ? `${p.bld} building(s), ${p.res || 0} residential unit(s), ${p.liv || 0} sq ft living area, built ${p.yr || 'unknown'}` : 'none on the roll (unimproved)'}`,
     p.flu
       ? `Future land use category: ${p.flu} — READ OFF THE COUNTY MAP BY STAFF, not from the roll. Density: ${FLU_CATEGORIES[p.flu].density}. ${FLU_CATEGORIES[p.flu].note} Use this for density, lot size and what uses are allowed.`
-      : 'Future land use category: NOT SET. Do not state or guess it. If the question turns on density, lot size or allowed use, say the category has to be read off the Future Land Use Map first, and give the rule for the category once known.',
+      : 'Future land use category: NOT SET by staff. If a FUTURE LAND USE FROM GIS line follows, use it as described there; otherwise do not state or guess the category, and if the question turns on density, lot size or allowed use, say the category has to be read off the Future Land Use Map first.',
+    gisFluContextLine(p),
     `Just value: ${p.jv ? money(p.jv) : 'not on the roll'}`,
     splitFlag(p.splt) ? `Split history: the Property Appraiser recorded this parcel as ${splitFlag(p.splt).action} in ${splitFlag(p.splt).when}.` : '',
     (p.related || []).length ? `Parcels numbered under the same root (usually pieces of the same original tract, per the Appraiser's numbering — a lead to confirm, not a title search): ${(p.related || []).map(r => `${r.id} ${r.acres || '?'} ac${splitFlag(r.splt) ? ' (' + splitFlag(r.splt).action + ' ' + splitFlag(r.splt).when + ')' : ''}`).join('; ')}` : '',
     p.syr ? `Last recorded sale: ${p.smo ? p.smo + '/' : ''}${p.syr}${p.spr ? ' for ' + money(p.spr) : ''}${p.bk ? `, OR book ${p.bk} page ${p.pg}` : ''}` : '',
     '',
-    'Use these facts when they bear on the question. Acreage governs split and density questions; whether there are buildings governs new construction versus renovation; homestead indicates owner-occupancy for owner-builder. Do not state the zoning, future land use category, flood zone or river buffer from this data — it does not contain them.',
+    'Use these facts when they bear on the question. Acreage governs split and density questions; whether there are buildings governs new construction versus renovation; homestead indicates owner-occupancy for owner-builder. Do not state the zoning, flood zone or river buffer from this data — it does not contain them. The future land use comes only from the staff-set line or the GIS line, never from the tax roll fields.',
   ].filter(Boolean).join('\n');
 }
 
@@ -2504,6 +2522,7 @@ function render() {
               </select>
               <a href="/docs/future-land-use-map.pdf" target="_blank" rel="noopener">Open map</a>
             </div>
+            ${gisFluBlock(activeParcel)}
             <!-- Staff at the counter expected the panel to show the Property
                  Appraiser's building sketch and it does not. This app cannot
                  fetch one, so it points at the office that has it rather than
@@ -2570,6 +2589,7 @@ function render() {
   // themselves to window and are simply absent if that module failed to load
   if (window.siteDiagram) window.siteDiagram.sync(activeParcel);
   if (window.smoothThread) window.smoothThread.attach(chatArea);
+  ensureParcelFlu();
 }
 
 function toggleDetail(e) {
@@ -2770,6 +2790,112 @@ async function setParcelFlu(category) {
   // it is still sitting there on screen. Ask it again so the visible answer
   // matches what the tool now knows.
   if (category) await reaskLastQuestion(category);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Future land use measured from the GIS map, served by /api/parcel-flu.
+// The server overlays the state's parcel lines on the statewide land use layer
+// (the 2019 regional planning council copy of the adopted map) and measures
+// the acres in each category. It also moves the land use lines 100 feet each
+// way and measures again, which is where the confidence rating comes from: if
+// the acres barely move, the parcel is well inside one category.
+//
+// It suggests; staff decide. The picker above stays the category of record,
+// and "Use" just sets it the same way picking it by hand does. A measurement
+// takes 10 to 40 seconds the first time, so the panel shows it arriving.
+// ══════════════════════════════════════════════════════════════════════
+const GIS_TO_FLU = {
+  'Agriculture': 'Agriculture',
+  'Mixed Use Rural Residential': 'Mixed Use — Rural Residential',
+  'Open Space/Conservation': 'Conservation / Open Space',
+  'Industrial': 'Industrial',
+  'Institutional': 'Public Institutional',
+};
+const gisInFlight = new Set();
+
+function gisResult(p) {
+  return p && p.gis && p.gis.status === 'ok' && p.gis.data && p.gis.data.parcels && p.gis.data.parcels[0];
+}
+
+// The category to offer: the biggest piece, and only when it maps cleanly
+// onto a category this tool knows.
+function gisTopCategory(p) {
+  const r = gisResult(p);
+  if (!r || !r.land_use.length) return null;
+  return GIS_TO_FLU[r.land_use[0].name] || null;
+}
+
+function ensureParcelFlu() {
+  const p = activeParcel;
+  if (!p || !p.id) return;
+  if (p.gis && (p.gis.status === 'ok' || p.gis.status === 'error')) return;
+  if (gisInFlight.has(p.id)) return;
+  gisInFlight.add(p.id);
+  p.gis = { status: 'loading' };
+  fetch('/api/parcel-flu?id=' + encodeURIComponent(p.id))
+    .then(r => r.json().catch(() => ({ ok: false, error: 'unreadable reply' })))
+    .then(d => { p.gis = d && d.ok ? { status: 'ok', data: d } : { status: 'error', error: (d && d.error) || 'no answer' }; })
+    .catch(err => { p.gis = { status: 'error', error: err.message }; })
+    .then(() => { gisInFlight.delete(p.id); if (typeof persistActive === 'function') persistActive(); if (activeParcel === p) render(); });
+}
+
+function retryParcelFlu() {
+  if (!activeParcel) return;
+  activeParcel.gis = null;
+  render();
+}
+
+function useGisFlu() {
+  const cat = gisTopCategory(activeParcel);
+  if (cat) setParcelFlu(cat);
+}
+
+function gisFluBlock(p) {
+  if (!p) return '';
+  const g = p.gis;
+  if (!g || g.status === 'loading') {
+    return `<div class="pb-gis"><div class="g-head">Land use from the GIS map</div>Measuring this parcel against the land use map. The first time takes up to half a minute.</div>`;
+  }
+  if (g.status === 'error') {
+    return `<div class="pb-gis Low"><div class="g-head">Land use from the GIS map</div>Couldn't measure it (${escapeHtml(g.error)}). Read it off the map instead.<div class="g-actions"><button type="button" onclick="retryParcelFlu()">Try again</button></div></div>`;
+  }
+  const r = gisResult(p);
+  if (!r) return '';
+  const c = r.confidence || { level: 'Medium', reasons: [] };
+  const top = gisTopCategory(p);
+  const rows = r.land_use.map(u => `<li><span>${escapeHtml(u.name)}</span><span>${u.acres.toLocaleString('en-US')} ac · ${Math.round(u.pct_of_parcel)}%</span></li>`).join('')
+    + (r.no_designation_acres >= 0.5 ? `<li><span>No land use in GIS</span><span>${r.no_designation_acres.toLocaleString('en-US')} ac</span></li>` : '');
+  const rollGap = p.acres && r.gis_acres ? Math.abs(r.gis_acres - p.acres) / p.acres * 100 : 0;
+  // The public page gets the measurement only when it is solid. A Medium or
+  // Low result is a staff conversation, not something to show an applicant.
+  if (!IS_STAFF) {
+    if (c.level !== 'High' || r.land_use.length !== 1) {
+      return `<div class="pb-gis"><div class="g-head">Future land use</div>Call the Liberty County Building Department at (850) 643-2215 to confirm the future land use for this parcel.</div>`;
+    }
+    return `<div class="pb-gis High"><div class="g-head">Future land use (county GIS map)</div><ul class="g-rows">${rows}</ul></div>`;
+  }
+  const mismatch = p.flu && top && p.flu !== top;
+  return `<div class="pb-gis ${escapeHtml(c.level)}">
+    <div class="g-head">Land use measured from the GIS map</div>
+    <ul class="g-rows">${rows}</ul>
+    <div class="g-conf ${escapeHtml(c.level)}">Confidence: ${escapeHtml(c.level)}</div>
+    <ul class="g-why">${(r.confidence ? r.confidence.reasons : []).map(x => `<li>${escapeHtml(x)}</li>`).join('')}${rollGap >= 10 ? `<li>The mapped parcel line measures ${r.gis_acres.toLocaleString('en-US')} ac against ${p.acres.toLocaleString('en-US')} ac on the roll, so the line itself may be off.</li>` : ''}<li>GIS copy of the map is from 2019.</li></ul>
+    ${mismatch ? `<div class="g-warn">The category set above is ${escapeHtml(p.flu)}, but the GIS map puts most of the parcel in ${escapeHtml(top)}. Check the adopted map.</div>` : ''}
+    <div class="g-actions">
+      ${top && p.flu !== top ? `<button type="button" onclick="useGisFlu()">Use ${escapeHtml(top)}${r.land_use.filter(u => u.acres >= 1).length > 1 ? ' (larger part)' : ''}</button>` : ''}
+      <a href="/flum" target="_blank" rel="noopener">Measure several parcels</a>
+    </div>
+  </div>`;
+}
+
+// For the model. Mode rules on the server decide how much of this it may say.
+function gisFluContextLine(p) {
+  const r = gisResult(p);
+  if (!r) return '';
+  const c = r.confidence || { level: 'Medium', reasons: [] };
+  const parts = r.land_use.map(u => `${u.name} ${u.acres} acres (${u.pct_of_parcel}% of the mapped parcel; ${u.range_if_lines_off_100ft ? u.range_if_lines_off_100ft[0] + ' to ' + u.range_if_lines_off_100ft[1] + ' acres if the map lines are 100 feet off' : ''})`);
+  if (r.no_designation_acres >= 0.5) parts.push(`no land use in the GIS layer ${r.no_designation_acres} acres`);
+  return `FUTURE LAND USE FROM GIS (measured by overlaying the state parcel line, ${r.gis_acres} acres, on the 2019 regional planning council GIS copy of the adopted Future Land Use Map — not read off the adopted map by staff): ${parts.join('; ')}. CONFIDENCE: ${c.level}. Why: ${c.reasons.join(' ')}`;
 }
 
 // The last real question — not a parcel number or a name search, both of which

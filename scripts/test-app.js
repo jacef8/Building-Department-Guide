@@ -32,7 +32,7 @@ const sb = {
 sb.window = sb;
 vm.createContext(sb);
 vm.runInContext(script.replace(/^init\(\);$/m, '') +
-  '\nglobalThis.__kb=KNOWLEDGE_BASE;\nglobalThis.__setIndex=(a)=>{REFERENCE_INDEX=a;};', sb);
+  '\nglobalThis.__gis=GIS_TO_FLU;globalThis.__flu=FLU_CATEGORIES;\nglobalThis.__kb=KNOWLEDGE_BASE;\nglobalThis.__setIndex=(a)=>{REFERENCE_INDEX=a;};', sb);
 
 const index = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/docs/reference-index.json'), 'utf8'));
 sb.__setIndex(index);
@@ -668,6 +668,37 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
     ok(fs.existsSync(path.join(ROOT, 'public/docs', file)), `${name}: ${file} is missing`);
     ok(html.includes("'" + name + "': '/docs/" + file + "'"), `${name} has no document link`);
   }
+}
+
+// ── future land use measured from the GIS map ───────────────────────
+// lib/flum.js measures a parcel against the statewide land use layer and
+// rates its own confidence by moving the map lines 100 feet. The parcel
+// panel offers the result; staff still decide the category of record.
+{
+  const srv = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+  ok(/\/api\/parcel-flu/.test(srv), 'the parcel land use endpoint is gone');
+  ok(/\/api\/flum/.test(srv), 'the multi-parcel land use endpoint is gone');
+  ok(/FLU_CACHE/.test(srv), 'the land use cache is gone; every parcel will remeasure');
+  ok(/FUTURE LAND USE FROM GIS/.test(srv), 'the model lost its rules for the GIS land use line');
+  ok(/public Permit Assistant: you may state the future land use only when the GIS confidence is High/.test(srv),
+     'the public assistant may now state a GIS land use that is not High confidence');
+  ok(fs.existsSync(path.join(ROOT, 'public/flum.html')), 'the land use measuring page is missing');
+  for (const fn of ['gisFluBlock', 'gisFluContextLine', 'ensureParcelFlu', 'useGisFlu', 'retryParcelFlu'])
+    ok(typeof sb[fn] === 'function', `${fn}() went missing`);
+  ok(Object.keys(sb.__gis).length >= 5 && Object.values(sb.__gis).every(c => sb.__flu[c]),
+     'a GIS land use name maps to a category the picker does not have');
+
+  const flum = require(path.join(ROOT, 'lib/flum.js'));
+  ok(flum.parseId('005-3S-8W-02681-000') && flum.parseId('0053S8W02681000').key === '0053S8W02681000',
+     'parcel numbers no longer parse for the land use lookup');
+  const A = 4046.8564224;
+  const inside = flum._test.rate({ areaSqm: 100 * A, cats: [{ name: 'Agriculture', sqm: 100 * A }], swingSqm: 0, noneSqm: 0 });
+  ok(inside.level === 'High', 'a parcel wholly inside one land use is no longer rated High');
+  const onLine = flum._test.rate({ areaSqm: 100 * A, cats: [{ name: 'Agriculture', sqm: 60 * A }, { name: 'Mixed Use Rural Residential', sqm: 40 * A }], swingSqm: 15 * A, noneSqm: 0 });
+  ok(onLine.level === 'Low', 'a parcel whose split swings 15% when the lines move is no longer rated Low');
+  const sq = (x0, y0, x1, y1) => [[x0, y0], [x0, y1], [x1, y1], [x1, y0], [x0, y0]];
+  const holed = flum._test.esriToMulti([sq(0, 0, 100, 100), sq(40, 40, 60, 60)]);
+  ok(Math.abs(flum._test.multiArea(holed) - 9600) < 1, 'a parcel with a hole in it is measured wrong');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
