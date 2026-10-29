@@ -504,6 +504,26 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
        'the rule sending fee citations to the Fee Schedule is gone');
   }
 
+  // The site plan. It used to be a rotatable 3D scene under a heading saying
+  // "to scale", which perspective makes impossible to measure, and it drew a
+  // 200 ft well exclusion circle on residential parcels.
+  {
+    const plan = html.slice(html.indexOf('window.siteDiagram'));
+    ok(!/THREE\./.test(plan), 'the site plan is back to a 3D scene; a perspective view cannot be measured');
+    ok(/createElementNS/.test(plan), 'the site plan is no longer drawn as SVG');
+    ok(!/r: WELL_RADIUS/.test(plan),
+       'the 200 ft well exclusion circle is being drawn again - LDC 6.4-4(A) excludes individual private wells');
+    ok(/but not individual private wells/.test(plan),
+       'the note no longer says the 200 ft zone does not cover a private well');
+    ok(/6\.4-4\(A\)/.test(plan) && /page 127/.test(plan),
+       'the private-well exclusion lost its section or its page');
+    ok(/does not say where the house sits/.test(plan),
+       'the plan no longer admits it does not know where the house is');
+    ok(/state\.set = true/.test(plan),
+       'the house no longer records that someone placed it, so an unplaced guess looks placed');
+    ok(!/id="siteCanvas"><\/canvas>/.test(html), 'the plan host is a canvas again');
+  }
+
   // An audit of the Code and the Plan against their PDFs: 182 of 184 Comp Plan
   // passages and 348 of 373 LDC passages sit on the page they name. The ones
   // that do not are off by one BACKWARDS, because a passage split at the size
