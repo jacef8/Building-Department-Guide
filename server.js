@@ -598,6 +598,95 @@ try {
 const normaliseParcel = (s) => (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const MAX_PARCEL_MATCHES = 8;
 
+// ── the mapped parcel boundary ──────────────────────────────────────
+// The tax roll carries area and not dimensions, so the site plan has always
+// drawn a square. The real shape is in the state cadastral service, and a
+// single parcel comes back in a second or two because PARCELNO and CO_NO are
+// indexed. (Bulk-fetching all 6,012 Liberty parcels does time out, which is
+// why this was written off once before. One parcel is a different query.)
+//
+// The boundary is NOT trusted on sight. A sample of 40 parcels put 79% within
+// 10% of the recorded acreage, 8% between 10 and 33% out, and 13% out by more
+// than a third - one with 640 acres on the roll against a 3,780 sq ft polygon.
+// So the area is measured here and sent with the shape, and the drawing says
+// which it is. A mapped line that disagrees with the roll is worth seeing; a
+// mapped line presented as fact when it disagrees is the kind of thing people
+// measure a setback off.
+const CADASTRAL = 'https://services9.arcgis.com/Gh9awoU677aKree0/arcgis/rest/services/'
+  + 'Florida_Statewide_Cadastral/FeatureServer/0/query';
+const LIBERTY_CO_NO = 49;                 // Liberty County's DOR number
+const SHAPE_CACHE = new Map();            // parcel id -> payload, this process only
+const SHAPE_TTL_MS = 12 * 60 * 60 * 1000;
+
+// local feet from degrees, good to well under a foot across one parcel
+function toFeet(rings) {
+  const all = rings.flat();
+  const lat0 = all.reduce((s, p) => s + p[1], 0) / all.length;
+  const lon0 = all.reduce((s, p) => s + p[0], 0) / all.length;
+  const fx = 364000 * Math.cos(lat0 * Math.PI / 180), fy = 364000;
+  return rings.map(r => r.map(([lon, lat]) => [(lon - lon0) * fx, (lat - lat0) * fy]));
+}
+
+function ringArea(ring) {
+  let a = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [x1, y1] = ring[i], [x2, y2] = ring[(i + 1) % ring.length];
+    a += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(a) / 2;
+}
+
+app.get('/api/parcel-shape', perIpParcelLimiter, async (req, res) => {
+  const id = String(req.query.id || '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{6,30}$/.test(id)) return res.status(400).json({ error: 'Bad parcel id.' });
+
+  const hit = SHAPE_CACHE.get(id);
+  if (hit && Date.now() - hit.at < SHAPE_TTL_MS) return res.json(hit.body);
+
+  const qs = new URLSearchParams({
+    where: `CO_NO=${LIBERTY_CO_NO} AND PARCELNO='${id.replace(/'/g, "''")}'`,
+    outFields: 'PARCELNO,LND_SQFOOT',
+    returnGeometry: 'true', outSR: '4326', f: 'json',
+  });
+
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 12000);
+    const r = await fetch(`${CADASTRAL}?${qs}`, { signal: ctl.signal });
+    clearTimeout(timer);
+    if (!r.ok) return res.status(502).json({ error: `Parcel map returned ${r.status}.` });
+    const data = await r.json();
+    if (data.error) return res.status(502).json({ error: 'Parcel map rejected the query.' });
+
+    const f = (data.features || [])[0];
+    const rings = f && f.geometry && f.geometry.rings;
+    if (!rings || !rings.length) {
+      const body = { id, found: false };
+      SHAPE_CACHE.set(id, { at: Date.now(), body });
+      return res.json(body);
+    }
+
+    const feet = toFeet(rings);
+    // rings after the first are holes; subtract them
+    const area = feet.reduce((s, ring, i) => s + (i ? -ringArea(ring) : ringArea(ring)), 0);
+    const xs = feet.flat().map(p => p[0]), ys = feet.flat().map(p => p[1]);
+    const body = {
+      id, found: true,
+      rings: feet.map(r => r.map(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10])),
+      areaSqFt: Math.round(area),
+      vertices: feet.reduce((s, r) => s + r.length, 0),
+      width: Math.round(Math.max(...xs) - Math.min(...xs)),
+      depth: Math.round(Math.max(...ys) - Math.min(...ys)),
+      rollSqFt: f.attributes && f.attributes.LND_SQFOOT ? Number(f.attributes.LND_SQFOOT) : null,
+    };
+    SHAPE_CACHE.set(id, { at: Date.now(), body });
+    res.json(body);
+  } catch (err) {
+    const why = err.name === 'AbortError' ? 'The parcel map did not answer in time.' : err.message;
+    res.status(502).json({ error: why });
+  }
+});
+
 app.post('/api/parcel', perIpParcelLimiter, (req, res) => {
   const { parcelId } = req.body || {};
   if (!parcelId || typeof parcelId !== 'string') {

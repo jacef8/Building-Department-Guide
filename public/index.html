@@ -2519,14 +2519,13 @@ function render() {
           <div class="card">
             <h2>Site plan — to scale</h2>
             <div class="cbody">
-              <div class="stage"><div id="siteCanvas"></div><span class="hint">Drag the house to where it is</span></div>
+              <div class="stage"><div id="siteCanvas"></div></div>
               <div class="legend">
                 <span><i style="background:#EDE7D2;border:1px solid #8C7B3F"></i>Lot, ${escapeHtml(acresText(activeParcel))}</span>
                 <span><i style="background:#FFFFFF;border:1px solid #8C3444"></i>Buildable</span>
-                ${activeParcel.liv ? '<span><i style="background:#751D2C"></i>House — drag to where it is</span>' : ''}
+                
                 
               </div>
-              <p class="note" id="siteSet"></p>
               <p class="note" id="siteNote"></p>
             </div>
           </div>
@@ -2534,7 +2533,7 @@ function render() {
       ` : `
         <div class="card">
           <h2>Parcel on the counter</h2>
-          <div class="cbody"><p class="empty-detail">No parcel loaded. Type a parcel number, an owner's last name or a road name in the box and every answer after that applies to that property — with a diagram of the lot, its setbacks and the well radius.</p></div>
+          <div class="cbody"><p class="empty-detail">No parcel loaded. Type a parcel number, an owner's last name or a road name in the box and every answer after that applies to that property — with a plan of the lot and its setbacks drawn to scale.</p></div>
         </div>
       `}
       <div class="card">
@@ -3091,27 +3090,25 @@ window.smoothThread = (() => {
 // ── the site plan ───────────────────────────────────────────────────
 // Style: Work tool. Clarity beats decoration, so this is a plan view, drawn
 // straight down and to scale, the way a plot plan at the counter is drawn.
-//
-// It replaces a rotatable 3D scene. That scene used a perspective camera under
-// a heading reading "to scale", and in perspective two equal distances are not
-// two equal lengths on screen, so nothing on it could actually be measured. It
-// also drew a house with a pitched roof and a well with a ball on top, which is
-// decoration on a tool whose whole job is showing whether something fits.
-//
 // SVG rather than canvas: a plan is a drawing, it stays crisp at any pixel
 // ratio with nothing to configure, and the dimensions can be real text.
 //
-// What the roll does NOT carry is where the house sits. The old version put it
-// at invented coordinates, and did the same for a well it drew a 200 ft
-// exclusion circle around. That circle was wrong twice over: the position was
-// made up, and the rule does not apply to a private well at all. The house now
-// starts marked as unplaced and is DRAGGED to where it really is, so an unknown
-// is a question the staff member answers rather than a fact the drawing invents.
+// It draws the parcel's MAPPED BOUNDARY when one can be had, and a square of
+// the recorded acreage when it cannot. The square is honest about being a
+// stand-in; the roll carries area and not dimensions, so a long narrow lot and
+// a square of the same acreage are the same number to it.
+//
+// The mapped boundary is not trusted on sight. Across 40 sampled parcels, 79%
+// of polygons came within 10% of the recorded acreage, 8% were 10 to 33% out
+// and 13% were out by more than a third, one of them 640 acres on the roll
+// against a 3,780 sq ft polygon. So the drawing says which it is, every time.
+//
 window.siteDiagram = (() => {
   const SQFT_PER_ACRE = 43560;
   const SETBACK = 20;            // Residential (Low Density), all four yards
-  const WELL_RADIUS = 200;       // zone of exclusion
-  const PAD = 34;                // room for the dimension labels
+  const PAD = 0.09;              // share of the frame left for dimension text
+  const SIDE_LABEL_MAX = 8;      // label every side only on a simple shape
+  const INSET_MAX_VERTS = 14;    // offsetting a 130-vertex ring is not reliable
 
   const NS = 'http://www.w3.org/2000/svg';
   const el = (name, attrs = {}) => {
@@ -3120,165 +3117,229 @@ window.siteDiagram = (() => {
     return n;
   };
   const ft = (n) => Math.round(n).toLocaleString() + ' ft';
+  const shapes = new Map();      // parcel id -> mapped boundary, or null
 
-  let drawnFor = null;
-  // kept per parcel so a re-render does not throw away where they were put
-  const placed = new Map();
+  // ArcGIS closes a ring by repeating its first point. That repeat is a
+  // zero-length edge, and offsetting a zero-length edge has no direction, so
+  // every setback line silently failed to draw until it was taken off.
+  const open = (ring) => {
+    if (ring.length > 2) {
+      const a = ring[0], b = ring[ring.length - 1];
+      if (Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(a[1] - b[1]) < 1e-6) return ring.slice(0, -1);
+    }
+    return ring;
+  };
 
-  function build(host, parcel) {
+  // Each edge moved inward by d, then consecutive edges re-intersected. Good
+  // on a simple lot, unreliable on a ring with a hundred vertices, so the
+  // result is checked before it is drawn: it has to come out smaller, stay
+  // positive, and not turn itself inside out.
+  function inset(closed, d) {
+    const ring = open(closed);
+    const n = ring.length;
+    if (n < 3 || n > INSET_MAX_VERTS) return null;
+    let a2 = 0;
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = ring[i], [x2, y2] = ring[(i + 1) % n];
+      a2 += x1 * y2 - x2 * y1;
+    }
+    if (!a2) return null;
+    const dir = a2 > 0 ? 1 : -1;            // inward side depends on winding
+    const lines = [];
+    for (let i = 0; i < n; i++) {
+      const [x1, y1] = ring[i], [x2, y2] = ring[(i + 1) % n];
+      const ex = x2 - x1, ey = y2 - y1, len = Math.hypot(ex, ey);
+      if (len < 1e-6) return null;
+      const nx = (-ey / len) * dir, ny = (ex / len) * dir;
+      lines.push([x1 + nx * d, y1 + ny * d, x2 + nx * d, y2 + ny * d]);
+    }
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const [ax, ay, bx, by] = lines[(i - 1 + n) % n];
+      const [cx, cy, dx, dy] = lines[i];
+      const r1x = bx - ax, r1y = by - ay, r2x = dx - cx, r2y = dy - cy;
+      const den = r1x * r2y - r1y * r2x;
+      if (Math.abs(den) < 1e-9) return null;   // parallel: no clean corner
+      const t = ((cx - ax) * r2y - (cy - ay) * r2x) / den;
+      out.push([ax + r1x * t, ay + r1y * t]);
+    }
+    const area = (r) => {
+      let s = 0;
+      for (let i = 0; i < r.length; i++) {
+        const [x1, y1] = r[i], [x2, y2] = r[(i + 1) % r.length];
+        s += x1 * y2 - x2 * y1;
+      }
+      return Math.abs(s) / 2;
+    };
+    const before = area(ring), after = area(out);
+    if (!(after > 0) || after >= before) return null;        // did not shrink
+    if (after < before * 0.04) return null;                  // collapsed
+    return { ring: out, areaSqFt: after };
+  }
+
+  function draw(host, parcel, shape) {
     const acres = Number(parcel.acres) || 0;
-    const side = Math.sqrt(acres * SQFT_PER_ACRE);
-    const inner = Math.max(side - SETBACK * 2, 0);
+    const rollSqFt = acres * SQFT_PER_ACRE;
     const living = Number(parcel.liv) || 0;
 
-    const box = host.getBoundingClientRect();
-    const size = Math.max(260, Math.min(box.width || 340, 460));
-    const span = side + PAD * 2 * (side / size);      // feet covered by the viewBox
-    const vb = `${-span / 2} ${-span / 2} ${span} ${span}`;
+    // the outline to draw, in feet, centred on itself
+    let rings, mapped = false, agree = null;
+    if (shape && shape.found && shape.rings && shape.rings.length) {
+      rings = shape.rings;
+      mapped = true;
+      if (rollSqFt > 0 && shape.areaSqFt > 0) {
+        agree = Math.min(shape.areaSqFt, rollSqFt) / Math.max(shape.areaSqFt, rollSqFt);
+      }
+    } else {
+      const side = Math.sqrt(rollSqFt);
+      rings = [[[-side / 2, -side / 2], [side / 2, -side / 2],
+                [side / 2, side / 2], [-side / 2, side / 2]]];
+    }
+    const pts = rings.flat();
+    const minX = Math.min(...pts.map(p => p[0])), maxX = Math.max(...pts.map(p => p[0]));
+    const minY = Math.min(...pts.map(p => p[1])), maxY = Math.max(...pts.map(p => p[1]));
+    const w = maxX - minX, h = maxY - minY;
+    const span = Math.max(w, h) * (1 + PAD * 2);
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
 
     const svg = el('svg', {
-      viewBox: vb, width: '100%', height: '100%',
-      role: 'img',
-      'aria-label': `Plan of a ${acresText(parcel)} lot, ${ft(side)} square, with ${SETBACK} ft setbacks`,
+      viewBox: `${cx - span / 2} ${cy - span / 2} ${span} ${span}`,
+      width: '100%', height: '100%', role: 'img',
+      'aria-label': mapped
+        ? `Mapped boundary of a ${acresText(parcel)} parcel, ${ft(w)} by ${ft(h)}`
+        : `A ${acresText(parcel)} parcel drawn as a square, its real shape not on the roll`,
     });
-
-    // They start apart so neither hides the other, and both start marked as
-    // NOT placed. A position nobody has set is not a position, and the
-    // dashed outline says so until someone drags it.
-    const state = placed.get(parcel.id)
-      || { wx: side * 0.22, wy: -side * 0.18, hx: -side * 0.12, hy: side * 0.1, set: false };
-    placed.set(parcel.id, state);
+    const stroke = span * 0.004;
+    const path = (ring) => ring.map((p, i) => (i ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ') + ' Z';
 
     // the lot
-    svg.appendChild(el('rect', {
-      x: -side / 2, y: -side / 2, width: side, height: side,
-      fill: '#EDE7D2', stroke: '#8C7B3F', 'stroke-width': span * 0.004,
+    svg.appendChild(el('path', {
+      d: rings.map(path).join(' '), 'fill-rule': 'evenodd',
+      fill: '#EDE7D2', stroke: '#8C7B3F', 'stroke-width': stroke,
+      'stroke-linejoin': 'round',
     }));
 
-    // a 20 ft grid, so a distance can be counted off by eye
-    const g = el('g', { stroke: '#D3C9A2', 'stroke-width': span * 0.0015, opacity: '.9' });
-    for (let t = -side / 2 + 20; t < side / 2; t += 20) {
-      g.appendChild(el('line', { x1: t, y1: -side / 2, x2: t, y2: side / 2 }));
-      g.appendChild(el('line', { x1: -side / 2, y1: t, x2: side / 2, y2: t }));
+    // a 20 ft grid to count a distance off by eye
+    const grid = el('g', { stroke: '#D3C9A2', 'stroke-width': span * 0.0014, opacity: '.85' });
+    const g0 = Math.ceil((cx - span / 2) / 20) * 20, g1 = cx + span / 2;
+    for (let t = g0; t < g1; t += 20) {
+      grid.appendChild(el('line', { x1: t, y1: cy - span / 2, x2: t, y2: cy + span / 2 }));
+      grid.appendChild(el('line', { x1: cx - span / 2, y1: t, x2: cx + span / 2, y2: t }));
     }
-    svg.appendChild(g);
+    svg.appendChild(grid);
+    svg.appendChild(el('path', {
+      d: rings.map(path).join(' '), 'fill-rule': 'evenodd',
+      fill: 'none', stroke: '#8C7B3F', 'stroke-width': stroke, 'stroke-linejoin': 'round',
+    }));
 
-    // what is left once the setbacks come off
-    if (inner > 0) {
-      svg.appendChild(el('rect', {
-        x: -inner / 2, y: -inner / 2, width: inner, height: inner,
-        fill: '#FFFFFF', stroke: '#8C3444', 'stroke-width': span * 0.004,
-        'stroke-dasharray': `${span * 0.012} ${span * 0.008}`,
+    // what is left once the setbacks come off, where it can be worked out
+    const cut = inset(rings[0], SETBACK);
+    if (rings.length === 1 && cut) {
+      svg.appendChild(el('path', {
+        d: path(cut.ring), fill: '#FFFFFF', stroke: '#8C3444', 'stroke-width': stroke,
+        'stroke-dasharray': `${span * 0.012} ${span * 0.008}`, 'stroke-linejoin': 'round',
       }));
     }
 
-    // NO 200 ft well circle. It used to be drawn around a well on the parcel,
-    // and it is wrong there: LDC Section 6.4-4(A), page 127, designates the
-    // zone of exclusion within 200 feet of a potable water supply well "(but
-    // not individual private wells)". A homeowner's own well does not sterilise
-    // the ground around it, and the knowledge base has said so all along in the
-    // entry "the 200-foot zone does not apply to a private well" - the picture
-    // was contradicting the tool's own answer. What the plan shows now is only
-    // what can be derived and is true: the lot, the setbacks, what is left.
-
-    // the house footprint, as a plan rectangle
-    let house = null;
-    if (living > 0) {
-      const w = Math.sqrt(living * 1.45), d = living / w;
-      house = el('g', { class: 'drag', tabindex: '0', role: 'button',
-        'aria-label': 'House footprint. Drag to where the house is.' });
-      house.appendChild(el('rect', { x: -w / 2, y: -d / 2, width: w, height: d,
-        fill: '#751D2C', 'fill-opacity': '.85', stroke: '#5E1723', 'stroke-width': span * 0.003 }));
-      svg.appendChild(house);
+    // dimensions: every side on a simple shape, the overall box otherwise
+    const fs = span * 0.034, dim = el('g', {
+      fill: '#6B6258', 'font-size': fs, 'font-family': 'inherit', 'text-anchor': 'middle',
+    });
+    if (rings.length === 1 && open(rings[0]).length <= SIDE_LABEL_MAX) {
+      const r = open(rings[0]);
+      for (let i = 0; i < r.length; i++) {
+        const [x1, y1] = r[i], [x2, y2] = r[(i + 1) % r.length];
+        const len = Math.hypot(x2 - x1, y2 - y1);
+        if (len < span * 0.08) continue;                  // no room for the text
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        let deg = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+        if (deg > 90 || deg < -90) deg += 180;            // never upside down
+        const ox = -(y2 - y1) / len * fs * 0.8, oy = (x2 - x1) / len * fs * 0.8;
+        const sign = ((mx - cx) * ox + (my - cy) * oy) > 0 ? 1 : -1;
+        const t = el('text', { x: mx + ox * sign, y: my + oy * sign,
+          transform: `rotate(${deg} ${mx + ox * sign} ${my + oy * sign})` });
+        t.textContent = ft(len);
+        dim.appendChild(t);
+      }
+    } else {
+      const t1 = el('text', { x: cx, y: minY - fs * 0.6 }); t1.textContent = ft(w) + ' across';
+      const t2 = el('text', { x: minX - fs * 0.6, y: cy,
+        transform: `rotate(-90 ${minX - fs * 0.6} ${cy})` });
+      t2.textContent = ft(h) + ' deep';
+      dim.appendChild(t1); dim.appendChild(t2);
     }
-
-    // dimensions on two sides, and a north arrow
-    const tick = span * 0.03, fs = span * 0.038;
-    const dim = el('g', { fill: '#6B6258', stroke: 'none', 'font-size': fs,
-      'font-family': 'inherit', 'text-anchor': 'middle' });
-    const t1 = el('text', { x: 0, y: -side / 2 - tick * 0.5 }); t1.textContent = ft(side);
-    dim.appendChild(t1);
-    const t2 = el('text', { x: -side / 2 - tick * 0.6, y: 0,
-      transform: `rotate(-90 ${-side / 2 - tick * 0.6} 0)` });
-    t2.textContent = ft(side);
-    dim.appendChild(t2);
     svg.appendChild(dim);
 
+    // north
     const n = el('g', { fill: '#231F20' });
-    n.appendChild(el('path', { d: `M ${side / 2 + tick * 0.7} ${-side / 2} l ${-tick * 0.32} ${tick * 0.8} l ${tick * 0.32} ${-tick * 0.26} l ${tick * 0.32} ${tick * 0.26} Z` }));
-    const nt = el('text', { x: side / 2 + tick * 0.7, y: -side / 2 + tick * 1.5,
-      'font-size': fs, 'text-anchor': 'middle', fill: '#6B6258' });
+    const nx = maxX + span * 0.035, ny = minY;
+    n.appendChild(el('path', { d: `M ${nx} ${ny} l ${-fs * 0.42} ${fs * 1.05} l ${fs * 0.42} ${-fs * 0.34} l ${fs * 0.42} ${fs * 0.34} Z` }));
+    const nt = el('text', { x: nx, y: ny + fs * 2, 'font-size': fs, 'text-anchor': 'middle', fill: '#6B6258' });
     nt.textContent = 'N';
     n.appendChild(nt);
     svg.appendChild(n);
 
-    const put = () => {
-      if (house) house.setAttribute('transform', `translate(${state.hx} ${state.hy})`);
-      const dash = state.set ? 'none' : `${span * 0.02} ${span * 0.014}`;
-      if (house) house.querySelector('rect').setAttribute('stroke-dasharray', dash);
-      if (house) house.querySelector('rect').setAttribute('fill-opacity', state.set ? '.85' : '.42');
-      const tag = document.getElementById('siteSet');
-      if (tag) tag.textContent = !house ? ''
-        : state.set ? 'House placed by you.'
-        : 'The roll does not say where the house sits — drag it to where it is.';
-    };
-    put();
-
-    // dragging, in feet, clamped to the lot
-    const grab = (node, kx, ky) => {
-      let id = null;
-      const clamp = (v) => Math.max(-side / 2, Math.min(side / 2, v));
-      node.addEventListener('pointerdown', (e) => {
-        id = e.pointerId; node.setPointerCapture(id); e.preventDefault();
-      });
-      node.addEventListener('pointermove', (e) => {
-        if (id === null) return;
-        const r = svg.getBoundingClientRect();
-        const fx = (e.clientX - r.left) / r.width * span - span / 2;
-        const fy = (e.clientY - r.top) / r.height * span - span / 2;
-        state[kx] = clamp(fx); state[ky] = clamp(fy); state.set = true;
-        put();
-      });
-      const done = () => { if (id !== null) { try { node.releasePointerCapture(id); } catch (_) {} } id = null; };
-      node.addEventListener('pointerup', done);
-      node.addEventListener('pointercancel', done);
-      // keyboard, because a drag-only control is unusable without a mouse
-      node.addEventListener('keydown', (e) => {
-        const step = e.shiftKey ? 20 : 5;
-        const by = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
-        if (!by) return;
-        e.preventDefault();
-        state[kx] = clamp(state[kx] + by[0]); state[ky] = clamp(state[ky] + by[1]); state.set = true;
-        put();
-      });
-    };
-    if (house) grab(house, 'hx', 'hy');
+    // No house is drawn. The roll says a building exists and how much heated
+    // living area it has, and nothing about where it stands. An earlier version
+    // drew one at invented coordinates; the version after that let staff drag
+    // it, which only moved an invented position to a different invented one.
+    // Jace: "they are what they are". So the plan shows the lot, which is
+    // known, and nothing that is not.
 
     host.textContent = '';
     host.appendChild(svg);
 
     const note = document.getElementById('siteNote');
-    if (note) {
-      const buildable = Math.round(inner * inner);
-      const radiusAcres = (Math.PI * WELL_RADIUS * WELL_RADIUS / SQFT_PER_ACRE).toFixed(1);
-      note.textContent =
-        `Drawn as a square of the ${acresText(parcel)} on the tax roll, because the roll carries area and not `
-        + `dimensions, so a long narrow lot of the same acreage would look different. `
-        + `The ${ft(side)} sides and the ${SETBACK} ft setbacks are to scale, leaving `
-        + `${buildable.toLocaleString()} sq ft inside them. The roll does not say where the house sits, so drag it. `
-        + `No well circle is drawn: the 200 ft zone of exclusion in Land Development Code Section 6.4-4(A), `
-        + `page 127, covers a potable water supply well "but not individual private wells", so a homeowner's `
-        + `own well does not stop them building near it. Check the land use category for density and the `
-        + `Code for the setbacks that apply here, because 20 ft is the Low Density Residential figure.`;
+    if (!note) return;
+    const parts = [];
+    if (mapped) {
+      parts.push(`Drawn from the parcel boundary on the county parcel map, ${ft(w)} across and ${ft(h)} deep.`);
+      if (agree !== null && agree < 0.9) {
+        parts.push(`THE MAP AND THE ROLL DISAGREE on this parcel. The mapped boundary works out at `
+          + `${Math.round(shape.areaSqFt).toLocaleString()} sq ft against ${Math.round(rollSqFt).toLocaleString()} `
+          + `on the tax roll, a difference of ${Math.round(Math.abs(shape.areaSqFt - rollSqFt) / rollSqFt * 100)}%. `
+          + `Do not measure a setback off this drawing until the Property Appraiser has sorted out which is right. `
+          + `About one Liberty parcel in five disagrees by more than a tenth.`);
+      } else if (agree !== null) {
+        parts.push(`The mapped area works out at ${Math.round(shape.areaSqFt).toLocaleString()} sq ft against `
+          + `${Math.round(rollSqFt).toLocaleString()} on the roll, so the two agree.`);
+      }
+    } else {
+      parts.push(`No parcel boundary came back for this one, so the lot is drawn as a SQUARE of the `
+        + `${acresText(parcel)} on the roll. The roll carries area and not dimensions, so a long narrow `
+        + `parcel of the same acreage looks the same here. Treat the shape as a stand-in.`);
     }
+    if (cut) {
+      parts.push(`The ${SETBACK} ft setback line leaves ${Math.round(cut.areaSqFt).toLocaleString()} sq ft inside it. `
+        + `20 ft is the Low Density Residential figure, so check the land use category for the one that applies here.`);
+    } else {
+      parts.push(`The setback line is not drawn on this shape: the boundary is too intricate to offset reliably, `
+        + `and a wrong line is worse than none. Take the setbacks off the Code for the parcel's land use category.`);
+    }
+    parts.push(`No well circle is drawn. The 200 ft zone of exclusion in Land Development Code Section 6.4-4(A), `
+      + `page 127, covers a potable water supply well "but not individual private wells", so a homeowner's own `
+      + `well does not stop them building near it.`);
+    note.textContent = parts.join(' ');
   }
 
   return {
     sync(parcel) {
       const host = document.getElementById('siteCanvas');
-      if (!host || !parcel || !(Number(parcel.acres) > 0)) { drawnFor = null; return; }
-      build(host, parcel);
-      drawnFor = parcel.id;
+      if (!host || !parcel || !(Number(parcel.acres) > 0)) return;
+
+      // the square goes up at once; the mapped boundary replaces it when it
+      // arrives, so the panel is never sitting empty waiting on a network call
+      draw(host, parcel, shapes.get(parcel.id));
+      if (shapes.has(parcel.id)) return;
+
+      fetch('/api/parcel-shape?id=' + encodeURIComponent(parcel.id))
+        .then(r => (r.ok ? r.json() : null))
+        .then(shape => {
+          shapes.set(parcel.id, shape && shape.found ? shape : null);
+          const still = document.getElementById('siteCanvas');
+          if (still && activeParcel && activeParcel.id === parcel.id) draw(still, parcel, shapes.get(parcel.id));
+        })
+        .catch(() => { shapes.set(parcel.id, null); });
     },
   };
 })();

@@ -504,6 +504,32 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
        'the rule sending fee citations to the Fee Schedule is gone');
   }
 
+  // The mapped parcel boundary. The roll carries area and not dimensions, so
+  // the plan used to draw every lot as a square. It now draws the real shape
+  // where one can be had, and says so when the map and the roll disagree:
+  // across 40 sampled parcels, 13% were out by more than a third.
+  {
+    const plan = html.slice(html.indexOf('window.siteDiagram'));
+    const srv = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+    ok(/\/api\/parcel-shape/.test(srv), 'the parcel-boundary endpoint is gone');
+    ok(/\^\[A-Z0-9\]\{6,30\}\$/.test(srv), 'the endpoint stopped validating the parcel id it interpolates');
+    ok(/SHAPE_CACHE/.test(srv), 'the boundary cache is gone; every parcel will refetch');
+    ok(/AbortController/.test(srv), 'the boundary fetch has no timeout and can hang the panel');
+
+    ok(/THE MAP AND THE ROLL DISAGREE/.test(plan),
+       'the plan no longer warns when the mapped boundary disagrees with the recorded acreage');
+    ok(/drawn as a SQUARE/.test(plan),
+       'the plan no longer says the square is a stand-in when no boundary comes back');
+    // ArcGIS repeats a ring's first point to close it; that zero-length edge
+    // made every setback line fail to draw, silently
+    ok(/const open = \(ring\)/.test(plan) && /ring\.slice\(0, -1\)/.test(plan),
+       'the repeated closing point is no longer stripped; setback lines will stop drawing');
+    ok(/INSET_MAX_VERTS/.test(plan),
+       'the plan will try to offset a 130-vertex boundary, which it cannot do reliably');
+    ok(/too intricate to offset reliably/.test(plan),
+       'the plan no longer says why a setback line is missing');
+  }
+
   // A staff member asked this tool twice what it could do and was told to ask
   // a supervisor both times. It knew the Code and not itself.
   {
@@ -562,10 +588,14 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
        'the note no longer says the 200 ft zone does not cover a private well');
     ok(/6\.4-4\(A\)/.test(plan) && /page 127/.test(plan),
        'the private-well exclusion lost its section or its page');
-    ok(/does not say where the house sits/.test(plan),
-       'the plan no longer admits it does not know where the house is');
-    ok(/state\.set = true/.test(plan),
-       'the house no longer records that someone placed it, so an unplaced guess looks placed');
+    // Jace: "they are what they are". No structure is drawn at all, because
+    // the roll says a building exists and not where it stands, and a draggable
+    // one only moved an invented position to a different invented position.
+    ok(!/class: 'drag'/.test(plan),
+       'a draggable structure is back on the plan; the roll does not say where it stands');
+    ok(!/setPointerCapture/.test(plan), 'drag wiring is back on the site plan');
+    ok(/No house is drawn/.test(plan),
+       'the plan no longer explains why no structure is shown');
     ok(!/id="siteCanvas"><\/canvas>/.test(html), 'the plan host is a canvas again');
   }
 
