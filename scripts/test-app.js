@@ -368,6 +368,21 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
   ok(limits && /Liberty County only/i.test(limits.text),
      'the limits entry no longer says the other 66 counties do not apply');
 
+  // the strategy names and their awards print on different LHAP lines and land
+  // in different passages, so this entry is what keeps them together
+  {
+    const strat = sb.retrieveChunks('what are the ship strategies and the maximum award for each', 9, new Map())
+      .find(c => /four strategies/i.test(c.section || ''));
+    ok(!!strat, 'the LHAP strategy-and-award entry no longer ranks for the question it exists to answer');
+    for (const pair of [['Owner Occupied Rehabilitation', '50,000'], ['Disaster Recovery', '30,000'],
+                        ['Emergency Repair', '27,500'], ['relocation assistance', '10,000']])
+      ok(strat && strat.text.toLowerCase().includes(pair[0].toLowerCase())
+              && strat.text.includes(pair[1]),
+         `the strategy entry lost ${pair[0]} or its $${pair[1]} award`);
+    ok(strat && /NOT Liberty County's allocation/i.test(strat.text),
+       'the entry no longer warns that $350,000 is a statutory threshold, not the county allocation');
+  }
+
   for (const [name, file] of [['Liberty County LHAP', 'liberty-lhap-2026-2029.pdf'],
                               ['SHIP Procedures Manual', 'ship-procedures-manual.pdf'],
                               ['SHIP Income and Rent Limits', 'ship-income-and-rent-limits-2026.pdf']]) {
