@@ -26,19 +26,33 @@ const { PDFParse } = require('pdf-parse');
 
 const DOCS = __dirname.replace(/\\/g, '/').replace(/\/scripts$/, '') + '/public/docs';
 const OUT = DOCS + '/reference-index.json';
-const PZ = 'S:/BOCC/County Departments/Building Department/Planning and Zoning';
 
-// The department's own documents are indexed from the PDFs this app already
-// serves, so a passage can never drift from the file a reader opens. The code
-// and the plan come from the county's copies in Planning & Zoning.
+// Every source is indexed from the PDF this app itself serves, so a passage can
+// never drift from the file a citation opens.
+//
+// The Code and the Plan used to be read from the county's S: drive while their
+// citations opened the copies here - two files that were only assumed to match,
+// and unreadable at all when off the network. They are the same documents with
+// the same pagination (138 and 52 pages; Schedule 1.0 on p.85, the subdivision
+// definition on p.46, both checked against the committed index), so they are now
+// read from here like everything else.
 const SOURCES = [
-  { file: `${PZ}/LIBERTY-COUNTY-Land-Development-Code 2017.pdf`, source: 'Land Development Code' },
-  { file: `${PZ}/Liberty-County-2012-2025-Comp-Plan.pdf`,        source: 'Comprehensive Plan' },
+  { file: `${DOCS}/land-development-code.pdf`,                   source: 'Land Development Code' },
+  { file: `${DOCS}/comprehensive-plan.pdf`,                      source: 'Comprehensive Plan' },
   { file: `${DOCS}/2026-fee-schedule.pdf`,                       source: '2026 Fee Schedule' },
   // One document in place of five. The guides it replaces are in the county's
   // Archive folder; they stated the same rules in five different wordings, and
   // four of them carried setback and acreage figures that were wrong.
   { file: `${DOCS}/permit-desk-reference.pdf`,                   source: 'Permit Desk Reference' },
+  // SHIP is the state housing assistance programme, not permitting. Everything
+  // marked topic 'ship' is held out of retrieval unless the question is plainly
+  // about housing assistance - see the gate in index.html. The statewide income
+  // and rent limits PDF is deliberately NOT indexed: it is a 67-county table
+  // whose text layer is a bare column of numbers, so a passage from it can hand
+  // an answer about Liberty the county printed above it. Liberty's own figures
+  // are a curated entry instead, which cites that PDF.
+  { file: `${DOCS}/ship-procedures-manual.pdf`,                  source: 'SHIP Procedures Manual', topic: 'ship' },
+  { file: `${DOCS}/liberty-lhap-2026-2029.pdf`,                  source: 'Liberty County LHAP', topic: 'ship' },
   { file: `${DOCS}/written-request-for-exemption-hb803.pdf`,     source: 'Exemption Form' },
   { file: `${DOCS}/building-fee-resolution-2026.pdf`,            source: 'Fee Resolution 2026' },
   { file: `${DOCS}/dbpr-license-abbreviations.pdf`,              source: 'DBPR License Abbreviations' },
@@ -206,6 +220,7 @@ function tidy(s) {
       const text = tidy(buf);
       if (text.length >= MIN || (final && text.length >= TAIL_MIN)) {
         const passage = { source: src.source, section: bufHeading, page: bufPage, text };
+        if (src.topic) passage.topic = src.topic;
         // where the passage ends, when that is not where it started
         if (page > bufPage) passage.last = page;
         out.push(passage);
@@ -242,6 +257,7 @@ function tidy(s) {
         const text = tidy(keep);
         if (text.length >= MIN) {
           const passage = { source: src.source, section: bufHeading, page: bufPage, text };
+        if (src.topic) passage.topic = src.topic;
           if (page > bufPage) passage.last = page;
           out.push(passage);
           made++;

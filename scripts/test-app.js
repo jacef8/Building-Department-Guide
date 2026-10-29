@@ -304,6 +304,78 @@ ok(/125/.test(sb.formatBubble('A porch permit is $125.00.', [])), 'a normal answ
   ok(/retrying without it/.test(server), 'the fallback for a rejected thinking field is gone');
 }
 
+
+// ── SHIP housing assistance stays out of permit answers ──────────────
+// SHIP is a different programme run from the same office, and it shares
+// vocabulary with permitting - repair, rehabilitation, unit, owner-occupied.
+// It is held out of retrieval behind SHIP_GATE. These checks are what stop
+// that gate drifting open.
+{
+  // The gate is a regex literal, not assembled from strings, because \b inside
+  // a JS string is a BACKSPACE character and these four words then match nothing
+  // at all - no error, no visible symptom. That bug was written once already.
+  for (const w of ['ship', 'lhap', 'hhrp', 'ami'])
+    ok(sb.shipAsked('tell me about ' + w),
+       `SHIP_GATE no longer matches the bare word "${w}" - look for \\b written inside a string`);
+
+  const PERMIT_QS = [
+    'do i need a permit for a shed', 'what is the roofing permit fee',
+    'how far back does a house have to be from the property line',
+    'who can pull a permit for a swimming pool', 'notice of commencement threshold',
+    'can i repair my own roof after the storm', 'my mobile home needs repairs after the hurricane',
+    'rehabilitation of an existing commercial building', 'owner builder affidavit requirements',
+    'how much to replace my roof', 'do i need a permit to replace my floors',
+    'can the owner do the electrical work themselves',
+  ];
+  for (const q of PERMIT_QS) {
+    ok(!sb.shipAsked(q), `SHIP_GATE opens on the permit question "${q}"`);
+    const got = sb.retrieveChunks(q, 9, new Map()).filter(c => c.topic === 'ship');
+    ok(got.length === 0, `"${q}" pulled ${got.length} SHIP passage(s) into a permit answer`);
+  }
+
+  const SHIP_QS = ['what are the ship income limits', 'is there down payment assistance',
+                   'what is the maximum ship award', 'owner occupied rehab assistance',
+                   'does the county have housing assistance', 'rent limit for a 2 bedroom'];
+  for (const q of SHIP_QS) {
+    ok(sb.shipAsked(q), `SHIP_GATE stays shut on the housing question "${q}"`);
+    ok(sb.retrieveChunks(q, 9, new Map()).some(c => c.topic === 'ship'),
+       `"${q}" reached no SHIP material at all`);
+  }
+
+  // every SHIP passage carries the tag, and nothing else does
+  const shipSrc = /SHIP|LHAP/;
+  ok(index.filter(c => shipSrc.test(c.source) && c.topic !== 'ship').length === 0,
+     'a SHIP passage is in the index untagged - it would show up in permit answers');
+  ok(index.filter(c => c.topic === 'ship' && !shipSrc.test(c.source)).length === 0,
+     'a non-SHIP passage is tagged topic:ship and is now hidden from permit answers');
+  ok(index.some(c => c.topic === 'ship'), 'the SHIP documents are not in the index at all');
+
+  // The statewide limits table must never be indexed as text: 67 counties of
+  // bare numbers with the column headings in a separate row, so a passage about
+  // Liberty carries the figures of the county printed above it.
+  ok(!index.some(c => c.source === 'SHIP Income and Rent Limits'),
+     'the 67-county limits table is indexed as text - a Liberty answer can quote another county');
+
+  // Liberty's own figures. The 9- and 10-person cells are merged in the PDF and
+  // were read against HUD's add-8%-of-the-4-person-limit rule.
+  // reached through retrieval rather than the array: KNOWLEDGE_BASE is a const,
+  // so it is not a property of the sandbox the way the functions are
+  const limits = sb.retrieveChunks('ship income and rent limits for liberty county', 9, new Map())
+    .find(c => c.source === 'SHIP Income and Rent Limits');
+  ok(!!limits && limits.topic === 'ship', 'the Liberty income and rent limits entry is missing');
+  for (const fig of ['75,500', '16,450', '39,150', '51,700', '54,810', '57,942', '1,408', '3,508'])
+    ok(limits && limits.text.includes(fig), `the limits entry lost the figure ${fig}`);
+  ok(limits && /Liberty County only/i.test(limits.text),
+     'the limits entry no longer says the other 66 counties do not apply');
+
+  for (const [name, file] of [['Liberty County LHAP', 'liberty-lhap-2026-2029.pdf'],
+                              ['SHIP Procedures Manual', 'ship-procedures-manual.pdf'],
+                              ['SHIP Income and Rent Limits', 'ship-income-and-rent-limits-2026.pdf']]) {
+    ok(fs.existsSync(path.join(ROOT, 'public/docs', file)), `${name}: ${file} is missing`);
+    ok(html.includes("'" + name + "': '/docs/" + file + "'"), `${name} has no document link`);
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 bad.forEach(b => console.log('  FAIL ' + b));
 process.exit(fail ? 1 : 0);
